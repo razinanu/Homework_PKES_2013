@@ -21,7 +21,7 @@ void init();
 int uart_putc(char);
 void uart_puts(const char*);
 void writetoDisplay(char, char, char);
-char s[30];
+
 enum {
 	Z0, Z1, Z2, Z3, Z4, Z5, Z6, Z7, Z8, Z9, MINUS_1, MINUS, SPACE
 };
@@ -76,10 +76,11 @@ void init() {
 int main() {
 
 	init();
-	//char s[20];
+	char s[20];
 	int delay = 10; // main clock [ms]
 	float version = 0.2;
 	char disp[] = { 0b10011111, 0b11111101, 0b10110111 };
+
 
 	uart_puts("----------------------------------\r\n");
 	uart_puts("PKES Wintersemester 2013/14\r\n");
@@ -107,6 +108,14 @@ int main() {
 
 		counter_func();
 
+		if (counter_value>MAX_COUNTER_VALUE){
+			  counter_value=MIN_COUNTER_VALUE;
+		  }
+		if(counter_value<MIN_COUNTER_VALUE){
+			counter_value=MAX_COUNTER_VALUE;
+
+		}
+
 		sprintf(s, "trigger: %3d", counter_trigger);
 		uart_puts(s);
 		sprintf(s, "| count: %2d | ", counter_value);
@@ -133,11 +142,6 @@ void convertToDisplay() {
 	int i = 0;
 
 	int digit[3] = { SPACE, SPACE, SPACE };
-
-	if (rest == -128) {
-		sprintf(s, "COUNTER VALUE IS 128: %3d", abs(rest));
-		uart_puts(s);
-	}
 
 	if (rest < 0) {
 		rest = abs(rest);
