@@ -155,7 +155,7 @@ void convertToDisplay() {
 	while (rest > 0) {
 		digit[i] = rest % 10;
 		rest = rest - digit[i];
-		rest = rest / 10;
+        rest = rest / 10;
 		i++;
 	}
 
