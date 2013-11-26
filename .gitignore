@@ -11,6 +11,6 @@
 *.elf
 
 #eclipse
-*.project
-*.cproject
-*/.settings/*
+#*.project
+#*.cproject
+#*/.settings/*

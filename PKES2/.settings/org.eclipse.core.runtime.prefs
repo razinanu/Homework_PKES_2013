@@ -1,0 +1,6 @@
+content-types/enabled=true
+content-types/org.eclipse.cdt.core.asmSource/file-extensions=S
+content-types/org.eclipse.cdt.core.cSource/file-extensions=c
+content-types/org.eclipse.cdt.core.cxxHeader/file-extensions=h,hpp
+content-types/org.eclipse.cdt.core.cxxSource/file-extensions=cpp,ino
+eclipse.preferences.version=1
