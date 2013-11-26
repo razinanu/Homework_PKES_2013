@@ -1,12 +1,16 @@
-*
+#Qt-Creator
+*.config
+*.creator
+*.creator.user
+*.files
+*.includes
 
-!.gitignore
+#
+*.o
+*.hex
+*.elf
 
-!*.ino
-
-!*.h
-
-!*.c
-
-!*.dep
-
+#eclipse
+*.project
+*.cproject
+*/.settings/*
