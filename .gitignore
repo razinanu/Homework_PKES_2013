@@ -5,10 +5,13 @@
 *.files
 *.includes
 
-#
+# binaries
 *.o
 *.hex
 *.elf
+*.dep
+*.a
+
 
 #eclipse
 #*.project
