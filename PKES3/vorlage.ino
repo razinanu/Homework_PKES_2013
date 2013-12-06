@@ -120,43 +120,45 @@ void loop() {
       // Get gyro data
       ((Flydurino*)flydurinoPtr)->getRotationalSpeed(&rot_x, &rot_y, &rot_z);
 
-      // Empirically determined Offset:
-      // Offset 81 was determined with ~1200 Samples and MPU6050 Digital Low Pass Mode 6
-      int16_t rot_z_offset = 82;
-
+      /*Empirically determined Offset:
+        Offset 81 was determined with ~1200 Samples and MPU6050 Digital Low Pass Mode 6*/
+      int16_t rot_z_offset = 81;
       // Substract Offset
       rot_z -= rot_z_offset;
+      /**/
 
-      //  FS_SEL | Full Scale Range   | LSB Sensitivity
-      //  -------+--------------------+----------------
-      //  0      | +/- 250 degrees/s  | 131 LSB/deg/s
-      //  1      | +/- 500 degrees/s  | 65.5 LSB/deg/s
-      //  2      | +/- 1000 degrees/s | 32.8 LSB/deg/s
-      //  3      | +/- 2000 degrees/s | 16.4 LSB/deg/s
+      /*FS_SEL | Full Scale Range   | LSB Sensitivity
+        -------+--------------------+----------------
+        0      | +/- 250 degrees/s  | 131 LSB/deg/s
+        1      | +/- 500 degrees/s  | 65.5 LSB/deg/s
+        2      | +/- 1000 degrees/s | 32.8 LSB/deg/s
+        3      | +/- 2000 degrees/s | 16.4 LSB/deg/s */
       uint8_t fs_sel = ((Flydurino*)flydurinoPtr)->getFullScaleGyroRange();
-//      switch(fs_sel)
-//        {
-//          case 0:
-//          rot_z = (int16_t)(rot_z/131);
-//        case 1:
-//          rot_z = (int16_t)(rot_z/65.5);
-//        case 2:
-//          rot_z = (int16_t)(rot_z/32.8);
-//        case 3:
-//          rot_z = (int16_t)(rot_z/16.4);
-//        }
+      switch(fs_sel)
+        {
+        case 0:
+          rot_z = (int16_t)(rot_z/131);
+          break;
+        case 1:
+          rot_z = (int16_t)(rot_z/65.5);
+          break;
+        case 2:
+          rot_z = (int16_t)(rot_z/32.8);
+          break;
+        case 3:
+          rot_z = (int16_t)(rot_z/16.4);
+          break;
+        }
 
-
-      //
-
-      Serial.print("\r\n");
-
-      current_rot_deg = rot_z;
-      sum_rot=  sum_rot + current_rot_deg;
+      current_rot_deg=rot_z;
+      sum_rot=sum_rot+current_rot_deg;
 
       delay(200);
-      Serial.print("sum_rot: ");Serial.print(sum_rot); Serial.print("\t");
+      Serial.print("\r\n");
+      Serial.print("fs_sel: ");Serial.print(fs_sel);Serial.print(" sum_rot: ");Serial.print(sum_rot); Serial.print("\t");
       Serial.print("R Z: ");
+
+      //Serial.print();Serial.print();Serial.print();
       //Serial.print(rot_x); Serial.print("\t");
       //Serial.print(rot_y); Serial.print("\t");
       Serial.print(rot_z); Serial.print("\t");
