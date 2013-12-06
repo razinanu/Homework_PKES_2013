@@ -102,6 +102,24 @@ void setup() {
   sum_rot=0;
 }
 
+/// displays degrees divided by 10
+void displayDegrees()
+{
+  int displaySumRot = (int)sum_rot;
+  uint8_t sign;
+  uint8_t first;
+  uint8_t second;
+  if(displaySumRot >= 0)
+    sign = displayMask(' ');
+  else
+    sign = displayMask('-');
+  displaySumRot = abs(displaySumRot);
+  first = 48+(int)displaySumRot/100;
+  second = 48+(int)((displaySumRot%100)/10);
+  Serial.print(first);
+  writetoDisplay(sign,displayMask((char)first),displayMask((char)second));
+}
+
 void loop() {
   // default state - avoids crash situations due to suddenly starting
   // PWM modus
@@ -160,16 +178,22 @@ void loop() {
       current_rot_deg=rot_z*(secs);
       sum_rot=sum_rot+current_rot_deg;
 
-      delay(200);
+      //display degrees divided by ten
+      displayDegrees();
+
       Serial.print("\r\n");
-      //Serial.print("fs_sel: ");Serial.print(fs_sel);
+      /*
+      Serial.print("fs_sel: ");Serial.print(fs_sel);
       Serial.print(" sum_rot: ");Serial.print(sum_rot); Serial.print("\t");
-      //Serial.print(rot_x); Serial.print("\t");
-      //Serial.print(rot_y); Serial.print("\t");
+      Serial.print(rot_x); Serial.print("\t");
+      Serial.print(rot_y); Serial.print("\t");
       Serial.print("R Z: ");Serial.print(rot_z); Serial.print("\t");
       Serial.print("C Z: ");Serial.print(current_rot_deg);Serial.print("\t");
       Serial.print("secs: ");Serial.print(secs);Serial.print("\t");
       Serial.print("dT: ");Serial.print(deltaTime);//Serial.print();
+      /**/
+
+      delay(200);
     }
   // Driving without any collision
   if (modus==2){
