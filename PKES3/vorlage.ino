@@ -90,7 +90,9 @@ void setup() {
   // Configure Flydurino
   new(flydurinoPtr) Flydurino;
   // -----------------------------------------------------
-  //((Flydurino*)flydurinoPtr)->configureZGyro(   );
+  // Tobi: This sets the Digital Low Pass Filter on the MPU6050
+  // mode 6 is the strongest Filter and should make everything smoother
+  ((Flydurino*)flydurinoPtr)->setDLPFMode(6);
 
   // -----------------------------------------------------
 
@@ -117,57 +119,61 @@ void loop() {
       ((Flydurino*)flydurinoPtr)->getOrientation(&ori_x, &ori_y, &ori_z);
       // Get gyro data
       ((Flydurino*)flydurinoPtr)->getRotationalSpeed(&rot_x, &rot_y, &rot_z);
-      //Filter
-      int16_t rot_x_f,rot_y_f,rot_z_f;
-      if(abs(rot_x) < 1000)
-        rot_x_f = 0;
-      else
-        rot_x_f = rot_x;
 
-      if(abs(rot_y) < 1000)
-        rot_y_f = 0;
-      else
-        rot_y_f = rot_y;
+      // Empirically determined Offset:
+      int16_t rot_z_offset = 0;
 
-      if(abs(rot_z) < 1000)
-        rot_z_f = 0;
-      else
-        rot_z_f = rot_z;
-      //Filter Ende
+      // Substract Offset
+      rot_z -= rot_z_offset;
 
-//      Serial.print("A: ");
-//      Serial.print(acc_x); Serial.print("\t");
-//      Serial.print(acc_y); Serial.print("\t");
-//      Serial.print(acc_z); Serial.print("|\t");
 
-//      Serial.print("O: ");
-//      Serial.print(ori_x); Serial.print("\t");
-//      Serial.print(ori_y); Serial.print("\t");
-//      Serial.print(ori_z); Serial.print("|\t");
-      delay(200);
 
-      Serial.print("R: ");
-      Serial.print(rot_x_f); Serial.print("\t");
-      Serial.print(rot_y_f); Serial.print("\t");
-      Serial.print(rot_z_f); Serial.print("|\t");
+      //  FS_SEL | Full Scale Range   | LSB Sensitivity
+      //  -------+--------------------+----------------
+      //  0      | +/- 250 degrees/s  | 131 LSB/deg/s
+      //  1      | +/- 500 degrees/s  | 65.5 LSB/deg/s
+      //  2      | +/- 1000 degrees/s | 32.8 LSB/deg/s
+      //  3      | +/- 2000 degrees/s | 16.4 LSB/deg/s
+      uint8_t fs_sel = ((Flydurino*)flydurinoPtr)->getFullScaleGyroRange();
+//      switch(fs_sel)
+//        {
+//          case 0:
+//          rot_z = (int16_t)(rot_z/131);
+//        case 1:
+//          rot_z = (int16_t)(rot_z/65.5);
+//        case 2:
+//          rot_z = (int16_t)(rot_z/32.8);
+//        case 3:
+//          rot_z = (int16_t)(rot_z/16.4);
+//        }
+
+
+      //
 
       Serial.print("\r\n");
 
-      //current_rot_deg = ;
-      //sum_rot=  sum_rot+ ...;
+      current_rot_deg = rot_z;
+      sum_rot=  sum_rot + current_rot_deg;
 
+      delay(200);
+      Serial.print("sum_rot: ");Serial.print(sum_rot); Serial.print("\t");
+      Serial.print("R Z: ");
+      //Serial.print(rot_x); Serial.print("\t");
+      //Serial.print(rot_y); Serial.print("\t");
+      Serial.print(rot_z); Serial.print("|\t");
     }
   // Driving without any collision
   if (modus==2){
-      uint8_t distance_left,distance_right;
-      distance_right = linearizeDistance(readADC(channel_1));
-      distance_left = linearizeDistance(readADC(channel_0));
+      sum_rot = 0;
+//      uint8_t distance_left,distance_right;
+//      distance_right = linearizeDistance(readADC(channel_1));
+//      distance_left = linearizeDistance(readADC(channel_0));
 
-      // Motor control
-      // -----------------------------------------------------
+//      // Motor control
+//      // -----------------------------------------------------
 
 
-      // -----------------------------------------------------
+//      // -----------------------------------------------------
 
       delay(50);
     }

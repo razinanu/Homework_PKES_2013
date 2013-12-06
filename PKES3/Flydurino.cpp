@@ -87,7 +87,7 @@ void Flydurino::getRotationalSpeed(int16_t *rot_x, int16_t* rot_y,int16_t* rot_z
 
 void Flydurino::configureZGyro(uint8_t mode){
    mpu6050.setDLPFMode(mode);
-   //mpu6050.setZGyroOffset(offset);
+   //mpu6050.setZGyroOffset(offset); /* never use this*/
    //mpu6050.setZGyroOffsetTC(50);
 }
 
