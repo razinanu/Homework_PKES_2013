@@ -29,7 +29,9 @@ int8_t channel_0 =  3;  // korrekte Werte bestimmen !
 int8_t channel_1 =  0;
 // -------------------------------------------------------------
 // Laufzeit des Programms
-unsigned long time;
+unsigned long currentTime;
+unsigned long lastTime;
+unsigned long deltaTime;
 
 // the setup routine runs once when you press reset:
 void setup() {
@@ -95,7 +97,7 @@ void setup() {
   ((Flydurino*)flydurinoPtr)->setDLPFMode(6);
 
   // -----------------------------------------------------
-
+  lastTime = millis();
   modus=0;
   sum_rot=0;
 }
@@ -103,13 +105,16 @@ void setup() {
 void loop() {
   // default state - avoids crash situations due to suddenly starting
   // PWM modus
+  currentTime = millis();
+  deltaTime = currentTime-lastTime;
+  lastTime = currentTime;
+
   if (modus==0){
       writetoDisplay(0b10011111,0b11111101,0b10110111);
 
       while(modus==0){
           modus=checkButtons();
         }
-      time = millis();
     }
   // Gyro task
   if (modus==1){
@@ -150,18 +155,21 @@ void loop() {
           break;
         }
 
-      current_rot_deg=rot_z;
+      // Integration
+      double secs = (double)deltaTime/1000;
+      current_rot_deg=rot_z*(secs);
       sum_rot=sum_rot+current_rot_deg;
 
       delay(200);
       Serial.print("\r\n");
-      Serial.print("fs_sel: ");Serial.print(fs_sel);Serial.print(" sum_rot: ");Serial.print(sum_rot); Serial.print("\t");
-      Serial.print("R Z: ");
-
-      //Serial.print();Serial.print();Serial.print();
+      //Serial.print("fs_sel: ");Serial.print(fs_sel);
+      Serial.print(" sum_rot: ");Serial.print(sum_rot); Serial.print("\t");
       //Serial.print(rot_x); Serial.print("\t");
       //Serial.print(rot_y); Serial.print("\t");
-      Serial.print(rot_z); Serial.print("\t");
+      Serial.print("R Z: ");Serial.print(rot_z); Serial.print("\t");
+      Serial.print("C Z: ");Serial.print(current_rot_deg);Serial.print("\t");
+      Serial.print("secs: ");Serial.print(secs);Serial.print("\t");
+      Serial.print("dT: ");Serial.print(deltaTime);//Serial.print();
     }
   // Driving without any collision
   if (modus==2){
