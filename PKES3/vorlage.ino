@@ -121,12 +121,11 @@ void loop() {
       ((Flydurino*)flydurinoPtr)->getRotationalSpeed(&rot_x, &rot_y, &rot_z);
 
       // Empirically determined Offset:
-      int16_t rot_z_offset = 0;
+      // Offset 81 was determined with ~1200 Samples and MPU6050 Digital Low Pass Mode 6
+      int16_t rot_z_offset = 82;
 
       // Substract Offset
       rot_z -= rot_z_offset;
-
-
 
       //  FS_SEL | Full Scale Range   | LSB Sensitivity
       //  -------+--------------------+----------------
@@ -160,7 +159,7 @@ void loop() {
       Serial.print("R Z: ");
       //Serial.print(rot_x); Serial.print("\t");
       //Serial.print(rot_y); Serial.print("\t");
-      Serial.print(rot_z); Serial.print("|\t");
+      Serial.print(rot_z); Serial.print("\t");
     }
   // Driving without any collision
   if (modus==2){
