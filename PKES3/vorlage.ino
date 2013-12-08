@@ -33,6 +33,14 @@ unsigned long currentTime;
 unsigned long lastTime;
 unsigned long deltaTime;
 
+enum
+{
+  MOTOR_FORWARD,
+  MOTOR_LEFT,
+  MOTOR_RIGHT,
+  MOTOR_STOP
+};
+
 // the setup routine runs once when you press reset:
 void setup() {
   // initialize serial communication
@@ -149,15 +157,25 @@ void displayDegrees()
 
 void setMotor(int motorMode)
 {
-  if(motorMode == 1)
-    {
+  switch(motorMode){
+    case MOTOR_FORWARD:
       TCCR1A  |= (1<<COM1A1 | 1<<COM1A0);
       TCCR3A  |= (1<<COM3C1 | 1<<COM3C0);
-    }
-  else
-    {
+      break;
+    case MOTOR_LEFT:
+      Serial.print("links");
+      TCCR1A  |= (1<<COM1A1 | 1<<COM1A0);
+      TCCR3A  &= ~(1<<COM3C1 | 1<<COM3C0);
+      break;
+    case MOTOR_RIGHT:
+      Serial.print("rechts");
+      TCCR1A  &= ~(1<<COM1A1 | 1<<COM1A0);
+      TCCR3A  |= (1<<COM3C1 | 1<<COM3C0);
+      break;
+    default:
       TCCR1A  &= ~(1<<COM1A1 | 1<<COM1A0);
       TCCR3A  &= ~(1<<COM3C1 | 1<<COM3C0);
+      break;
     }
 }
 
@@ -218,6 +236,22 @@ void loop() {
       double secs = (double)deltaTime/1000;
       current_rot_deg=rot_z*(secs);
       sum_rot=sum_rot+current_rot_deg;
+      Serial.print(" sum_rot: ");Serial.print(sum_rot); Serial.print("\t");
+      if(abs(sum_rot) > 10)
+        {
+          if(sum_rot > 0)
+            {
+              setMotor(MOTOR_RIGHT);
+            }
+          else
+            {
+              setMotor(MOTOR_LEFT);
+            }
+        }
+      else
+        {
+          setMotor(MOTOR_STOP);
+        }
 
       //display degrees divided by ten
       displayDegrees();
@@ -236,7 +270,7 @@ void loop() {
     }
   // Driving without any collision
   if (modus==2){
-      setMotor(1);
+      setMotor(MOTOR_FORWARD);
 
       uint8_t distance_left,distance_right;
       distance_right = linearizeDistance(readADC(channel_1));
@@ -265,7 +299,7 @@ int8_t checkButtons(){
   if(modus!=modus_new)
     {
       Serial.print(modus);Serial.print("\t");Serial.print(modus_new);
-      setMotor(0);
+      setMotor(MOTOR_STOP);
     }
   return modus_new;
 }
