@@ -83,10 +83,38 @@ void setup() {
   // -----------------------------------------------------
   digitalRead(4);  // S1
 
-  // Configure PWM
+  //  Configure PWM
+  //  Digital 11 | OC1A:
+  /*  OC1A, Output Compare Match A output: The PB5 pin can serve as an external output for the
+      Timer/Counter1 Output Compare A. The pin has to be configured as an output (DDB5 set (one))
+      to serve this function. The OC1A pin is also the output pin for the PWM mode timer function.
+  */
+  //  Digital  3 | OC3C:
+  /*  OC3C, Output Compare Match C output: The PE5 pin can serve as an External output for the
+d      Timer/Counter3 Output Compare C. The pin has to be configured as an output (DDE5 set “one”)
+      to serve this function. The OC3C pin is also the output pin for the PWM mode timer function.
+  */
+  /*  TODO: TCNT1(TCCR1x)/OCR1A/OC1A einsstellen und
+      TCNT3(TCCR3x)/OCR3C/OC3C einstellen / Prescaler=256 (100) CS12:0
+      Waveform Generation Mode = 5 (0101) WGM3:0
+      COMnA1/COMnB1/COMnC1 = 1 / COMnA0/COMnB0/COMnC0=0*/
   // -----------------------------------------------------
+  pinMode(11,OUTPUT);
+  TCCR1A  = 0<<COM1A1 | 0<<COM1A0 | 0<<COM1B1 | 0<<COM1B0 | 0<COM1C1 | 0<<COM1C0 | 0<<WGM11 | 1<<WGM10;
+  TCCR1B  = 0<<ICNC1  | 0<<ICES1  |   0<<5    |  0<<WGM13 |  1<<WGM12 | 0<<CS12   | 0<<CS11  | 1<<CS10;
+  OCR1A   = 25;
 
+  pinMode(3,OUTPUT);
+  TCCR3A  = 0<<COM3A1 | 0<<COM3A0 | 0<<COM3B1 | 0<<COM3B0 | 0<<COM3C1 | 0<<COM3C0 | 0<<WGM31 | 1<<WGM30;
+  TCCR3B  = 0<<ICNC3  | 0<<ICES3  |   0<<5    |  0<<WGM33 |  1<<WGM32 | 0<<CS32   | 0<<CS31  | 1<<CS30;
+  OCR3C   = 25;
 
+  pinMode(13,OUTPUT);
+  digitalWrite(13,HIGH);
+
+  pinMode(12,OUTPUT);
+  digitalWrite(12,HIGH);
+  /**/
   // -----------------------------------------------------
 
   // Configure Flydurino
@@ -116,17 +144,30 @@ void displayDegrees()
   displaySumRot = abs(displaySumRot);
   first = 48+(int)displaySumRot/100;
   second = 48+(int)((displaySumRot%100)/10);
-  Serial.print(first);
   writetoDisplay(sign,displayMask((char)first),displayMask((char)second));
 }
 
+void setMotor(int motorMode)
+{
+  if(motorMode == 1)
+    {
+      TCCR1A  |= (1<<COM1A1 | 1<<COM1A0);
+      TCCR3A  |= (1<<COM3C1 | 1<<COM3C0);
+    }
+  else
+    {
+      TCCR1A  &= ~(1<<COM1A1 | 1<<COM1A0);
+      TCCR3A  &= ~(1<<COM3C1 | 1<<COM3C0);
+    }
+}
+
 void loop() {
-  // default state - avoids crash situations due to suddenly starting
-  // PWM modus
   currentTime = millis();
   deltaTime = currentTime-lastTime;
   lastTime = currentTime;
 
+  // default state - avoids crash situations due to suddenly starting
+  // PWM modus
   if (modus==0){
       writetoDisplay(0b10011111,0b11111101,0b10110111);
 
@@ -180,8 +221,6 @@ void loop() {
 
       //display degrees divided by ten
       displayDegrees();
-
-      Serial.print("\r\n");
       /*
       Serial.print("fs_sel: ");Serial.print(fs_sel);
       Serial.print(" sum_rot: ");Serial.print(sum_rot); Serial.print("\t");
@@ -192,22 +231,22 @@ void loop() {
       Serial.print("secs: ");Serial.print(secs);Serial.print("\t");
       Serial.print("dT: ");Serial.print(deltaTime);//Serial.print();
       /**/
-
+      Serial.print("\r\n");
       delay(200);
     }
   // Driving without any collision
   if (modus==2){
-      sum_rot = 0;
-//      uint8_t distance_left,distance_right;
-//      distance_right = linearizeDistance(readADC(channel_1));
-//      distance_left = linearizeDistance(readADC(channel_0));
+      setMotor(1);
 
-//      // Motor control
-//      // -----------------------------------------------------
+      uint8_t distance_left,distance_right;
+      distance_right = linearizeDistance(readADC(channel_1));
+      distance_left = linearizeDistance(readADC(channel_0));
+
+      // Motor control
+      // -----------------------------------------------------
 
 
-//      // -----------------------------------------------------
-
+      // -----------------------------------------------------
       delay(50);
     }
   modus=checkButtons();
@@ -222,6 +261,11 @@ int8_t checkButtons(){
     }
   if (analogRead(4) > 800){
       modus_new=2;
+    }
+  if(modus!=modus_new)
+    {
+      Serial.print(modus);Serial.print("\t");Serial.print(modus_new);
+      setMotor(0);
     }
   return modus_new;
 }
@@ -251,7 +295,6 @@ void displayDistance (int8_t dist){
 
   // Darstellung der Distanz in cm auf dem Display
   // -----------------------------------------------------
-
 
   // -----------------------------------------------------
 
