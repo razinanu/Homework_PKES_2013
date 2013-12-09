@@ -17,3 +17,6 @@
 #*.project
 #*.cproject
 #*/.settings/*
+.metadata/*
+PKES3/.settings/*
+PKES3/.project

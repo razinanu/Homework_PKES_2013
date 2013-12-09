@@ -14,6 +14,7 @@ void displayDistance (int8_t dist);
 uint16_t readADC(int8_t channel);
 void writetoDisplay(char digit1, char digit2, char digit3);
 uint8_t displayMask(char val);
+const int NUM_READS = 10;
 
 char flydurinoPtr[sizeof(Flydurino)];
 // aktuelle Beschleunigungswerte, Kompassmessungen
@@ -25,8 +26,8 @@ float current_rot_deg, sum_rot;
 int8_t modus;
 // Kanal des ADC Wandlers
 // -------------------------------------------------------------
-int8_t channel_0 =  3;  // korrekte Werte bestimmen !
-int8_t channel_1 =  0;
+int8_t channelLeft =2; // korrekte Werte bestimmen !
+int8_t channelRight = 3;
 // -------------------------------------------------------------
 // Laufzeit des Programms
 unsigned long currentTime;
@@ -46,41 +47,41 @@ void setup() {
   // initialize serial communication
   Serial.begin(9600);
 
-  Serial.println("----------------------------------"    );
-  Serial.println("PKES Wintersemester 2013/14"           );
-  Serial.println("Vorlage 3. Aufgabe "                   );
-  Serial.println("----------------------------------\r\n");
+	Serial.println("----------------------------------");
+	Serial.println("PKES Wintersemester 2013/14");
+	Serial.println("Vorlage 3. Aufgabe ");
+	Serial.println("----------------------------------\r\n");
 
-  // -------------------------------------------------------------
-  // Single Onboard LED configuration
-  // -------------------------------------------------------------
-  // set leds LED_X as output
-  // alternative
-  //     - intermediate
-  //       DDRA=1+2+4+8;
-  //     - using processor makros
-  //       DDRA=((1<<DDA0) | (1<<DDA1) | (1<<DDA2) | (1<<DDA3));
-  //     - using hardware specific makros
-  DDRB |= (1<<DDA7);
-  // disable leds
-  PORTB &= ~(1<<7);
-  // -------------------------------------------------------------
-  // Serial bus lines
-  // -------------------------------------------------------------
-  // Pin 5 = PORT E 3 = clock
-  DDRE |= (1<<DDE3);
-  // Pin 6 = PORT H 3 = data
-  DDRH |= (1<<DDH3);
-  // Pin 7 = PORT H 4 = enable
-  DDRH |= (1<<DDH4);
-  // -------------------------------------------------------------
-  // Button configuration
-  // -------------------------------------------------------------
-  // not necessary but for completion
-  // S1 as input
-  DDRF &=~(1<<DDF4);
-  // S2 as input
-  DDRG &=~(1<<DDG5);
+	// -------------------------------------------------------------
+	// Single Onboard LED configuration
+	// -------------------------------------------------------------
+	// set leds LED_X as output
+	// alternative
+	//     - intermediate
+	//       DDRA=1+2+4+8;
+	//     - using processor makros
+	//       DDRA=((1<<DDA0) | (1<<DDA1) | (1<<DDA2) | (1<<DDA3));
+	//     - using hardware specific makros
+	DDRB |= (1 << DDA7);
+	// disable leds
+	PORTB &= ~(1 << 7);
+	// -------------------------------------------------------------
+	// Serial bus lines
+	// -------------------------------------------------------------
+	// Pin 5 = PORT E 3 = clock
+	DDRE |= (1 << DDE3);
+	// Pin 6 = PORT H 3 = data
+	DDRH |= (1 << DDH3);
+	// Pin 7 = PORT H 4 = enable
+	DDRH |= (1 << DDH4);
+	// -------------------------------------------------------------
+	// Button configuration
+	// -------------------------------------------------------------
+	// not necessary but for completion
+	// S1 as input
+	DDRF &= ~(1 << DDF4);
+	// S2 as input
+	DDRG &= ~(1 << DDG5);
 
   // Configuration of ADC
   // -----------------------------------------------------
@@ -272,18 +273,24 @@ void loop() {
   if (modus==2){
       setMotor(MOTOR_FORWARD);
 
-      uint8_t distance_left,distance_right;
-      distance_right = linearizeDistance(readADC(channel_1));
-      distance_left = linearizeDistance(readADC(channel_0));
+		uint8_t distance_left, distance_right;
+		distance_right = linearizeDistance(readADC(channelRight));
+		distance_left = linearizeDistance(readADC(channelLeft));
 
-      // Motor control
-      // -----------------------------------------------------
+		Serial.print("RIGHT: ");
+		Serial.print(distance_right);
+		Serial.print("\t");
+		Serial.print("LEFT: ");
+		Serial.print(distance_left);
+		Serial.print("\r\n");
 
+		// Motor control
+		// -----------------------------------------------------
 
-      // -----------------------------------------------------
-      delay(50);
-    }
-  modus=checkButtons();
+		// -----------------------------------------------------
+		delay(50);
+	}
+	modus = checkButtons();
 }
 
 int8_t checkButtons(){
@@ -304,46 +311,83 @@ int8_t checkButtons(){
   return modus_new;
 }
 
-void displaySpiritLevel(int16_t acc_x, int16_t acc_y, int16_t acc_z){
+void displaySpiritLevel(int16_t acc_x, int16_t acc_y, int16_t acc_z)
+{
 
-  //   3 cases for roll and pitch
-  // -15 Grad <= alpha,
-  // -15 Grad <= alpha  <= 15 Grad
-  //  15 Grad <= alpha
-  // -----------------------------------------------------
+	//   3 cases for roll and pitch
+	// -15 Grad <= alpha,
+	// -15 Grad <= alpha  <= 15 Grad
+	//  15 Grad <= alpha
+	// -----------------------------------------------------
 
-  // -----------------------------------------------------
+	// -----------------------------------------------------
 }
 
-uint8_t linearizeDistance(uint16_t distance_raw){
-  double distance_cm=0;
-  // Transformation der Spannungsbezogenen Distanzwerte in
-  // eine Entfernung in cm
-  // -----------------------------------------------------
+uint8_t linearizeDistance(uint16_t distance_raw)
+{
+	double distance_cm = 0;
+	distance_cm =2*((3500 /(double)(distance_raw + 4)) - 1);
 
-  // -----------------------------------------------------
-  return (int8_t)ceil(distance_cm);
+	// Transformation der Spannungsbezogenen Distanzwerte in
+	// eine Entfernung in cm
+	// -----------------------------------------------------
+
+	// -----------------------------------------------------
+	return (int8_t) ceil(distance_cm);
 }
 
-void displayDistance (int8_t dist){
+void displayDistance(int8_t dist)
+{
 
-  // Darstellung der Distanz in cm auf dem Display
-  // -----------------------------------------------------
+	// Darstellung der Distanz in cm auf dem Display
+	// -----------------------------------------------------
 
-  // -----------------------------------------------------
-
+	// -----------------------------------------------------
 
 }
 
-uint16_t readADC (int8_t channel){
-  uint16_t distance_raw=0xFFFF;
-  // möglicherweise mehrmaliges Lesen des ADC Kanals
-  // Mittelwertbildung
-  // -----------------------------------------------------
-  distance_raw = analogRead(channel);
+uint16_t readADC(int8_t channel)
+{
+	uint16_t distance_raw = 0xFFFF;
+	// möglicherweise mehrmaliges Lesen des ADC Kanals
+	// Mittelwertbildung
+	// -----------------------------------------------------
 
-  // -----------------------------------------------------
-  return distance_raw;
+	int sortedValues[NUM_READS];
+	for (int i = 0; i < NUM_READS; i++)
+	{
+		int value = analogRead(channel);
+		int j;
+		if (value < sortedValues[0] || i == 0)
+		{
+			j = 0; //insert at first position
+		}
+		else
+		{
+			for (j = 1; j < i; j++)
+			{
+				if (sortedValues[j - 1] <= value && sortedValues[j] >= value)
+				{
+					// j is insert position
+					break;
+				}
+			}
+		}
+		for (int k = i; k > j; k--)
+		{
+			// move all values higher than current reading up one position
+			sortedValues[k] = sortedValues[k - 1];
+		}
+		sortedValues[j] = value; //insert current reading
+	}
+
+	for (int i = NUM_READS / 2 - 5; i < (NUM_READS / 2 + 5); i++)
+	{
+		distance_raw += sortedValues[i];
+	}
+	distance_raw = distance_raw / 10;
+
+	return distance_raw;
 }
 
 void writetoDisplay(char digit1, char digit2, char digit3){
