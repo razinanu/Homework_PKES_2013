@@ -34,12 +34,17 @@ unsigned long currentTime;
 unsigned long lastTime;
 unsigned long deltaTime;
 
-enum
+int countZeros =0;
+bool turnBack = false;
+
+enum motorMode
 {
   MOTOR_FORWARD,
-  MOTOR_LEFT,
-  MOTOR_RIGHT,
-  MOTOR_STOP
+  MOTOR_LEFT_TURN,
+  MOTOR_RIGHT_TURN,
+  MOTOR_STOP,
+    MOTOR_LEFT,
+    MOTOR_RIGHT
 };
 
 // the setup routine runs once when you press reset:
@@ -103,7 +108,7 @@ void setup() {
 d      Timer/Counter3 Output Compare C. The pin has to be configured as an output (DDE5 set “one”)
       to serve this function. The OC3C pin is also the output pin for the PWM mode timer function.
   */
-  /*  TODO: TCNT1(TCCR1x)/OCR1A/OC1A einsstellen und
+  /*  TCNT1(TCCR1x)/OCR1A/OC1A einsstellen und
       TCNT3(TCCR3x)/OCR3C/OC3C einstellen / Prescaler=256 (100) CS12:0
       Waveform Generation Mode = 5 (0101) WGM3:0
       COMnA1/COMnB1/COMnC1 = 1 / COMnA0/COMnB0/COMnC0=0*/
@@ -158,25 +163,45 @@ void displayDegrees()
 
 void setMotor(int motorMode)
 {
-  switch(motorMode){
+    switch(motorMode){
     case MOTOR_FORWARD:
-      TCCR1A  |= (1<<COM1A1 | 1<<COM1A0);
-      TCCR3A  |= (1<<COM3C1 | 1<<COM3C0);
-      break;
+        TCCR1A  |= (1<<COM1A1 | 1<<COM1A0);
+        TCCR3A  |= (1<<COM3C1 | 1<<COM3C0);
+        digitalWrite(13,HIGH);
+        digitalWrite(12,HIGH);
+        break;
+    case MOTOR_LEFT_TURN:
+        Serial.print("links");
+        TCCR1A  |= (1<<COM1A1 | 1<<COM1A0);
+        TCCR3A  &= ~(1<<COM3C1 | 1<<COM3C0);
+        digitalWrite(13,HIGH);
+        digitalWrite(12,HIGH);
+        break;
+    case MOTOR_RIGHT_TURN:
+        Serial.print("rechts");
+        TCCR1A  &= ~(1<<COM1A1 | 1<<COM1A0);
+        TCCR3A  |= (1<<COM3C1 | 1<<COM3C0);
+        digitalWrite(13,HIGH);
+        digitalWrite(12,HIGH);
+        break;
     case MOTOR_LEFT:
-      Serial.print("links");
-      TCCR1A  |= (1<<COM1A1 | 1<<COM1A0);
-      TCCR3A  &= ~(1<<COM3C1 | 1<<COM3C0);
-      break;
+        TCCR1A  |= (1<<COM1A1 | 1<<COM1A0);
+        TCCR3A  |= (1<<COM3C1 | 1<<COM3C0);
+        digitalWrite(13,HIGH);
+        digitalWrite(12,LOW);
+        break;
     case MOTOR_RIGHT:
-      Serial.print("rechts");
-      TCCR1A  &= ~(1<<COM1A1 | 1<<COM1A0);
-      TCCR3A  |= (1<<COM3C1 | 1<<COM3C0);
-      break;
+        TCCR1A  |= (1<<COM1A1 | 1<<COM1A0);
+        TCCR3A  |= (1<<COM3C1 | 1<<COM3C0);
+        digitalWrite(13,LOW);
+        digitalWrite(12,HIGH);
+        break;
     default:
-      TCCR1A  &= ~(1<<COM1A1 | 1<<COM1A0);
-      TCCR3A  &= ~(1<<COM3C1 | 1<<COM3C0);
-      break;
+        TCCR1A  &= ~(1<<COM1A1 | 1<<COM1A0);
+        TCCR3A  &= ~(1<<COM3C1 | 1<<COM3C0);
+        digitalWrite(13,HIGH);
+        digitalWrite(12,HIGH);
+        break;
     }
 }
 
@@ -209,7 +234,6 @@ void loop() {
       // Substract Offset
       rot_z -= rot_z_offset;
       /**/
-
       /*FS_SEL | Full Scale Range   | LSB Sensitivity
         -------+--------------------+----------------
         0      | +/- 250 degrees/s  | 131 LSB/deg/s
@@ -237,23 +261,39 @@ void loop() {
       double secs = (double)deltaTime/1000;
       current_rot_deg=rot_z*(secs);
       sum_rot=sum_rot+current_rot_deg;
-      Serial.print(" sum_rot: ");Serial.print(sum_rot); Serial.print("\t");
-      if(abs(sum_rot) > 10)
-        {
-          if(sum_rot > 0)
-            {
-              setMotor(MOTOR_RIGHT);
-            }
-          else
-            {
-              setMotor(MOTOR_LEFT);
-            }
-        }
-      else
-        {
-          setMotor(MOTOR_STOP);
-        }
+      //Serial.print(" sum_rot: ");Serial.print(sum_rot); Serial.print("\t");
 
+      if(rot_z <= 10){
+        countZeros++;
+      }
+
+      Serial.print("zero: ");Serial.print(countZeros);
+        Serial.print("R Z: ");Serial.print(rot_z); Serial.print("\t");
+
+      if(countZeros == 20){
+            countZeros = 0;
+            turnBack = true;
+      }
+
+      if(turnBack)
+      {
+          if(abs(sum_rot) > 10)
+          {
+              if(sum_rot > 0)
+              {
+                  setMotor(MOTOR_RIGHT);
+              }
+              else
+              {
+                  setMotor(MOTOR_LEFT);
+              }
+          }
+          else
+          {
+              setMotor(MOTOR_STOP);
+              turnBack = false;
+          }
+      }
       //display degrees divided by ten
       displayDegrees();
       /*
