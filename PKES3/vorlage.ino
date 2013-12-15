@@ -186,22 +186,26 @@ void setMotor(int motorMode)
     }
 }
 
-void loop() {
-  currentTime = millis();
-  deltaTime = currentTime-lastTime;
-  lastTime = currentTime;
+void loop()
+{
+    currentTime = millis();
+    deltaTime = currentTime-lastTime;
+    lastTime = currentTime;
 
-  // default state - avoids crash situations due to suddenly starting
-  // PWM modus
-  if (modus==0){
-      writetoDisplay(0b10011111,0b11111101,0b10110111);
+    // default state - avoids crash situations due to suddenly starting
+    // PWM modus
+    if (modus==0)
+    {
+        writetoDisplay(0b10011111,0b11111101,0b10110111);
 
-      while(modus==0){
-          modus=checkButtons();
+        while(modus==0)
+        {
+            modus=checkButtons();
         }
     }
   // Gyro task
-  if (modus==1){
+  if (modus==1)
+  {
       // Receive acceleromation values
       ((Flydurino*)flydurinoPtr)->getAcceleration(&acc_x, &acc_y, &acc_z);
       // Get compass data
@@ -244,15 +248,8 @@ void loop() {
       current_rot_deg=rot_z*(secs);
       sum_rot=sum_rot+current_rot_deg;
       Serial.print(" sum_rot: ");Serial.print(sum_rot); Serial.print("\t");
-      if(abs(sum_rot) > 10)
-        {
-          if(sum_rot > 0)
-            {
-              setMotor(MOTOR_RIGHT);
-            }
-
       Serial.print("zero: ");Serial.print(countZeros);
-        Serial.print("R Z: ");Serial.print(rot_z); Serial.print("\t");
+      Serial.print("R Z: ");Serial.print(rot_z); Serial.print("\t");
 
       if(countZeros == 20){
             countZeros = 0;
