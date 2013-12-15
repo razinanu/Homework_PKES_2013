@@ -43,6 +43,10 @@ enum
 {
 	MOTOR_FORWARD, MOTOR_LEFT, MOTOR_RIGHT, MOTOR_STOP
 };
+enum speed
+{
+	SPEED_HIGH, SPEED_MEDIUM, SPEED_SLOW, SPEED_VERY_SLOW
+};
 
 // the setup routine runs once when you press reset:
 void setup()
@@ -116,7 +120,7 @@ void setup()
 			| 0 << COM1C0 | 0 << WGM11 | 1 << WGM10;
 	TCCR1B =
 			0 << ICNC1 | 0 << ICES1
-					| 0 << 5| 0<<WGM13 | 1<<WGM12 | 0<<CS12 | 0<<CS11 | 1<<CS10;OCR1A=25;
+					| 0 << 5| 0<<WGM13 | 1<<WGM12 | 0<<CS12 | 0<<CS11 | 1<<CS10;OCR1A=150;
 
 					pinMode
 	(
@@ -125,7 +129,7 @@ void setup()
 			| 0 << COM3C0 | 0 << WGM31 | 1 << WGM30;
 	TCCR3B =
 			0 << ICNC3 | 0 << ICES3
-					| 0 << 5| 0<<WGM33 | 1<<WGM32 | 0<<CS32 | 0<<CS31 | 1<<CS30;OCR3C=25;
+					| 0 << 5| 0<<WGM33 | 1<<WGM32 | 0<<CS32 | 0<<CS31 | 1<<CS30;OCR3C=150;
 
 					pinMode
 	(
@@ -165,6 +169,33 @@ void displayDegrees()
 	second = 48 + (int) ((displaySumRot % 100) / 10);
 	writetoDisplay(sign, displayMask((char) first), displayMask((char) second));
 }
+void setSpeed(int speedMode)
+
+{
+
+	switch (speedMode)
+	{
+
+	case SPEED_HIGH:
+		OCR1A = 90;
+		OCR3C = 90;
+		break;
+	case SPEED_MEDIUM:
+		OCR1A = 120;
+		OCR3C = 120;
+		break;
+	case SPEED_SLOW:
+		OCR1A = 150;
+		OCR3C = 150;
+		break;
+	case SPEED_VERY_SLOW:
+		OCR1A = 160;
+		OCR3C = 160;
+		break;
+
+	}
+
+}
 
 void setMotor(int motorMode)
 {
@@ -173,6 +204,7 @@ void setMotor(int motorMode)
 	case MOTOR_FORWARD:
 		TCCR1A |= (1 << COM1A1 | 1 << COM1A0);
 		TCCR3A |= (1 << COM3C1 | 1 << COM3C0);
+
 		break;
 	case MOTOR_LEFT:
 		Serial.print("links");
@@ -255,15 +287,56 @@ void loop()
 		Serial.print(" sum_rot: ");
 		Serial.print(sum_rot);
 		Serial.print("\t");
+
 		if (abs(sum_rot) > 10)
 		{
 			if (sum_rot > 0)
 			{
-				setMotor(MOTOR_RIGHT);
+
+				if (sum_rot > 50)
+				{
+					setSpeed(SPEED_HIGH);
+					setMotor(MOTOR_RIGHT);
+				}
+				if (sum_rot > 30)
+				{
+					setSpeed(SPEED_MEDIUM);
+					setMotor(MOTOR_RIGHT);
+				}
+				if (sum_rot > 20)
+				{
+					setSpeed(SPEED_SLOW);
+					setMotor(MOTOR_RIGHT);
+				}
+				if (sum_rot > 10)
+				{
+					setSpeed(SPEED_VERY_SLOW);
+					setMotor(MOTOR_RIGHT);
+				}
+
 			}
 			else
 			{
-				setMotor(MOTOR_LEFT);
+				if (abs(sum_rot) > 50)
+				{
+					setSpeed(1);
+					setMotor(MOTOR_LEFT);
+				}
+				if (abs(sum_rot) > 30)
+				{
+					setSpeed(2);
+					setMotor(MOTOR_LEFT);
+				}
+				if (abs(sum_rot) > 20)
+				{
+					setSpeed(3);
+					setMotor(MOTOR_LEFT);
+				}
+				if (abs(sum_rot) > 10)
+				{
+					setSpeed(SPEED_VERY_SLOW);
+					setMotor(MOTOR_LEFT);
+				}
 			}
 		}
 		else
@@ -289,6 +362,7 @@ void loop()
 	// Driving without any collision
 	if (modus == 2)
 	{
+		setSpeed(1);
 		setMotor(MOTOR_FORWARD);
 
 		uint8_t distance_left, distance_right;
@@ -302,15 +376,34 @@ void loop()
 		Serial.print(distance_left);
 		Serial.print("\r\n");
 
+		if (distance_right < 13)
+		{
 
-   if(distance_right<10){
-	   setMotor(MOTOR_LEFT);
+			if (distance_right < 5)
+			{
+				setMotor(MOTOR_STOP);
+			}
+			else{
+				setSpeed(3);
+				setMotor(MOTOR_LEFT);
+			}
 
-   }
-   if (distance_left<10){
- 	   setMotor(MOTOR_RIGHT);
 
-    }
+		}
+		if (distance_left < 15)
+		{
+
+			if (distance_left < 5)
+			{
+				setMotor(MOTOR_STOP);
+			}
+			else{
+				setSpeed(3);
+				setMotor(MOTOR_RIGHT);
+			}
+
+
+		}
 
 		// Motor control
 		// -----------------------------------------------------
@@ -386,17 +479,17 @@ uint16_t readADC(int8_t channel)
 	// Mittelwertbildung
 	// -----------------------------------------------------
 
-	int sum=0;
+	int sum = 0;
 //	if(buffer==NUM_READS){
 //		buffer=1;
 //	}
 //	if (buffer == 0)
 //	{
-		for (int i = 0; i < NUM_READS; i++)
-		{
-			sortedValues[i] = analogRead(channel);
+	for (int i = 0; i < NUM_READS; i++)
+	{
+		sortedValues[i] = analogRead(channel);
 
-		}
+	}
 
 //	}
 //	else
@@ -404,7 +497,8 @@ uint16_t readADC(int8_t channel)
 //      sortedValues[buffer-1]=analogRead(channel);
 //	}
 
-	for(int i=0; i<NUM_READS;i++){
+	for (int i = 0; i < NUM_READS; i++)
+	{
 		sum += sortedValues[i];
 	}
 	//buffer++;
