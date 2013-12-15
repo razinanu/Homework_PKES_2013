@@ -42,9 +42,18 @@ bool turnBack = false;
 enum motorMode
 {
   MOTOR_FORWARD,
-  MOTOR_LEFT,
-  MOTOR_RIGHT,
-  MOTOR_STOP
+  MOTOR_TURN_LEFT,
+  MOTOR_TURN_RIGHT,
+  MOTOR_STOP,
+  MOTOR_ROTATE_LEFT,
+  MOTOR_ROTATE_RIGHT
+};
+enum speed
+{
+    SPEED_HIGH,
+    SPEED_MEDIUM,
+    SPEED_SLOW,
+    SPEED_VERY_SLOW
 };
 
 // the setup routine runs once when you press reset:
@@ -117,12 +126,12 @@ d      Timer/Counter3 Output Compare C. The pin has to be configured as an outpu
   pinMode(11,OUTPUT);
   TCCR1A  = 0<<COM1A1 | 0<<COM1A0 | 0<<COM1B1 | 0<<COM1B0 | 0<COM1C1 | 0<<COM1C0 | 0<<WGM11 | 1<<WGM10;
   TCCR1B  = 0<<ICNC1  | 0<<ICES1  |   0<<5    |  0<<WGM13 |  1<<WGM12 | 0<<CS12   | 0<<CS11  | 1<<CS10;
-  OCR1A   = 25;
+  OCR1A   = 150;
 
   pinMode(3,OUTPUT);
   TCCR3A  = 0<<COM3A1 | 0<<COM3A0 | 0<<COM3B1 | 0<<COM3B0 | 0<<COM3C1 | 0<<COM3C0 | 0<<WGM31 | 1<<WGM30;
   TCCR3B  = 0<<ICNC3  | 0<<ICES3  |   0<<5    |  0<<WGM33 |  1<<WGM32 | 0<<CS32   | 0<<CS31  | 1<<CS30;
-  OCR3C   = 25;
+  OCR3C   = 150;
 
   pinMode(13,OUTPUT);
   digitalWrite(13,HIGH);
@@ -161,28 +170,75 @@ void displayDegrees()
   second = 48+(int)((displaySumRot%100)/10);
   writetoDisplay(sign,displayMask((char)first),displayMask((char)second));
 }
+void setSpeed(int speedMode)
+
+{
+
+	switch (speedMode)
+	{
+
+	case SPEED_HIGH:
+		OCR1A = 90;
+		OCR3C = 90;
+		break;
+	case SPEED_MEDIUM:
+		OCR1A = 120;
+		OCR3C = 120;
+		break;
+	case SPEED_SLOW:
+		OCR1A = 150;
+		OCR3C = 150;
+		break;
+	case SPEED_VERY_SLOW:
+		OCR1A = 160;
+		OCR3C = 160;
+		break;
+
+	}
+
+}
 
 void setMotor(int motorMode)
 {
-  switch(motorMode){
+    switch(motorMode){
     case MOTOR_FORWARD:
-      TCCR1A  |= (1<<COM1A1 | 1<<COM1A0);
-      TCCR3A  |= (1<<COM3C1 | 1<<COM3C0);
-      break;
-    case MOTOR_LEFT:
-      Serial.print("links");
-      TCCR1A  |= (1<<COM1A1 | 1<<COM1A0);
-      TCCR3A  &= ~(1<<COM3C1 | 1<<COM3C0);
-      break;
-    case MOTOR_RIGHT:
-      Serial.print("rechts");
-      TCCR1A  &= ~(1<<COM1A1 | 1<<COM1A0);
-      TCCR3A  |= (1<<COM3C1 | 1<<COM3C0);
-      break;
+        TCCR1A  |= (1<<COM1A1 | 1<<COM1A0);
+        TCCR3A  |= (1<<COM3C1 | 1<<COM3C0);
+        digitalWrite(13,HIGH);
+        digitalWrite(12,HIGH);
+        break;
+    case MOTOR_TURN_LEFT:
+        Serial.print("links");
+        TCCR1A  |= (1<<COM1A1 | 1<<COM1A0);
+        TCCR3A  &= ~(1<<COM3C1 | 1<<COM3C0);
+        digitalWrite(13,HIGH);
+        digitalWrite(12,HIGH);
+        break;
+    case MOTOR_TURN_RIGHT:
+        Serial.print("rechts");
+        TCCR1A  &= ~(1<<COM1A1 | 1<<COM1A0);
+        TCCR3A  |= (1<<COM3C1 | 1<<COM3C0);
+        digitalWrite(13,HIGH);
+        digitalWrite(12,HIGH);
+        break;
+    case MOTOR_ROTATE_LEFT:
+        TCCR1A  |= (1<<COM1A1 | 1<<COM1A0);
+        TCCR3A  |= (1<<COM3C1 | 1<<COM3C0);
+        digitalWrite(13,HIGH);
+        digitalWrite(12,LOW);
+        break;
+    case MOTOR_ROTATE_RIGHT:
+        TCCR1A  |= (1<<COM1A1 | 1<<COM1A0);
+        TCCR3A  |= (1<<COM3C1 | 1<<COM3C0);
+        digitalWrite(13,LOW);
+        digitalWrite(12,HIGH);
+        break;
     default:
-      TCCR1A  &= ~(1<<COM1A1 | 1<<COM1A0);
-      TCCR3A  &= ~(1<<COM3C1 | 1<<COM3C0);
-      break;
+        TCCR1A  &= ~(1<<COM1A1 | 1<<COM1A0);
+        TCCR3A  &= ~(1<<COM3C1 | 1<<COM3C0);
+        digitalWrite(13,HIGH);
+        digitalWrite(12,HIGH);
+        break;
     }
 }
 
@@ -243,13 +299,22 @@ void loop()
           break;
         }
 
-      // Integration
-      double secs = (double)deltaTime/1000;
-      current_rot_deg=rot_z*(secs);
-      sum_rot=sum_rot+current_rot_deg;
-      Serial.print(" sum_rot: ");Serial.print(sum_rot); Serial.print("\t");
-      Serial.print("zero: ");Serial.print(countZeros);
-      Serial.print("R Z: ");Serial.print(rot_z); Serial.print("\t");
+
+		// Integration
+		double secs = (double) deltaTime / 1000;
+		current_rot_deg = rot_z * (secs);
+		sum_rot = sum_rot + current_rot_deg;
+        Serial.print("zeros: ");
+        Serial.print(countZeros);
+		Serial.print("\t");
+
+        if(current_rot_deg == 0)
+        {
+            countZeros++;
+        }else
+        {
+            countZeros = 0;
+        }
 
       if(countZeros == 20){
             countZeros = 0;
@@ -258,40 +323,84 @@ void loop()
 
       if(turnBack)
       {
-          if(abs(sum_rot) > 10)
-          {
-              if(sum_rot > 0)
-              {
-                  setMotor(MOTOR_RIGHT);
-              }
-              else
-              {
-                  setMotor(MOTOR_LEFT);
-              }
-          }
-          {
-              setMotor(MOTOR_STOP);
-              turnBack = false;
-          }
-      }
-      //display degrees divided by ten
-      displayDegrees();
-      /*
-      Serial.print("fs_sel: ");Serial.print(fs_sel);
-      Serial.print(" sum_rot: ");Serial.print(sum_rot); Serial.print("\t");
-      Serial.print(rot_x); Serial.print("\t");
-      Serial.print(rot_y); Serial.print("\t");
-      Serial.print("R Z: ");Serial.print(rot_z); Serial.print("\t");
-      Serial.print("C Z: ");Serial.print(current_rot_deg);Serial.print("\t");
-      Serial.print("secs: ");Serial.print(secs);Serial.print("\t");
-      Serial.print("dT: ");Serial.print(deltaTime);//Serial.print();
-      /**/
-      Serial.print("\r\n");
-      delay(200);
-    }
-  // Driving without any collision
-  if (modus==2){
-      setMotor(MOTOR_FORWARD);
+		if (abs(sum_rot) > 10)
+		{
+			if (sum_rot > 0)
+			{
+
+				if (sum_rot > 50)
+				{
+					setSpeed(SPEED_HIGH);
+                    setMotor(MOTOR_ROTATE_RIGHT);
+                }else
+				if (sum_rot > 30)
+				{
+					setSpeed(SPEED_MEDIUM);
+                    setMotor(MOTOR_ROTATE_RIGHT);
+                }else
+				if (sum_rot > 20)
+				{
+					setSpeed(SPEED_SLOW);
+                    setMotor(MOTOR_ROTATE_RIGHT);
+                }else
+				if (sum_rot > 10)
+				{
+                    setSpeed(SPEED_SLOW);
+                    setMotor(MOTOR_ROTATE_RIGHT);
+				}
+
+			}
+			else
+			{
+				if (abs(sum_rot) > 50)
+				{
+					setSpeed(1);
+                    setMotor(MOTOR_ROTATE_LEFT);
+                }else
+				if (abs(sum_rot) > 30)
+				{
+					setSpeed(2);
+                    setMotor(MOTOR_ROTATE_LEFT);
+                }else
+				if (abs(sum_rot) > 20)
+				{
+					setSpeed(3);
+                    setMotor(MOTOR_ROTATE_LEFT);
+                }else
+				if (abs(sum_rot) > 10)
+				{
+                    setSpeed(SPEED_SLOW);
+                    setMotor(MOTOR_ROTATE_LEFT);
+				}
+			}
+		}
+		else
+		{
+			setMotor(MOTOR_STOP);
+			turnBack = false;
+		}
+	}
+
+		//display degrees divided by ten
+		displayDegrees();
+		/*
+		 Serial.print("fs_sel: ");Serial.print(fs_sel);
+		 Serial.print(" sum_rot: ");Serial.print(sum_rot); Serial.print("\t");
+		 Serial.print(rot_x); Serial.print("\t");
+		 Serial.print(rot_y); Serial.print("\t");
+		 Serial.print("R Z: ");Serial.print(rot_z); Serial.print("\t");
+		 Serial.print("C Z: ");Serial.print(current_rot_deg);Serial.print("\t");
+		 Serial.print("secs: ");Serial.print(secs);Serial.print("\t");
+		 Serial.print("dT: ");Serial.print(deltaTime);//Serial.print();
+		 /**/
+		Serial.print("\r\n");
+		delay(200);
+	}
+	// Driving without any collision
+	if (modus == 2)
+	{
+		setSpeed(1);
+		setMotor(MOTOR_FORWARD);
 
 		uint8_t distance_left, distance_right;
 		distance_right = linearizeDistance(readADC(channelRight));
@@ -304,15 +413,34 @@ void loop()
 		Serial.print(distance_left);
 		Serial.print("\r\n");
 
+		if (distance_right < 13)
+		{
 
-   if(distance_right<10){
-	   setMotor(MOTOR_LEFT);
+			if (distance_right < 5)
+			{
+				setMotor(MOTOR_STOP);
+			}
+			else{
+				setSpeed(3);
+                setMotor(MOTOR_TURN_LEFT);
+			}
 
-   }
-   if (distance_left<10){
- 	   setMotor(MOTOR_RIGHT);
 
-    }
+		}
+		if (distance_left < 15)
+		{
+
+			if (distance_left < 5)
+			{
+				setMotor(MOTOR_STOP);
+			}
+			else{
+				setSpeed(3);
+                setMotor(MOTOR_TURN_RIGHT);
+			}
+
+
+		}
 
 		// Motor control
 		// -----------------------------------------------------
@@ -383,17 +511,17 @@ uint16_t readADC(int8_t channel)
 	// Mittelwertbildung
 	// -----------------------------------------------------
 
-	int sum=0;
+	int sum = 0;
 //	if(buffer==NUM_READS){
 //		buffer=1;
 //	}
 //	if (buffer == 0)
 //	{
-		for (int i = 0; i < NUM_READS; i++)
-		{
-			sortedValues[i] = analogRead(channel);
+	for (int i = 0; i < NUM_READS; i++)
+	{
+		sortedValues[i] = analogRead(channel);
 
-		}
+	}
 
 //	}
 //	else
@@ -401,7 +529,8 @@ uint16_t readADC(int8_t channel)
 //      sortedValues[buffer-1]=analogRead(channel);
 //	}
 
-	for(int i=0; i<NUM_READS;i++){
+	for (int i = 0; i < NUM_READS; i++)
+	{
 		sum += sortedValues[i];
 	}
 	//buffer++;
