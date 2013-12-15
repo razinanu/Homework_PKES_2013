@@ -378,30 +378,36 @@ void loop()
 
 		if (distance_right < 13)
 		{
-
-			if (distance_right < 5)
+			if (distance_right < 10)
+			{
+				//auf der Stelle drehen
+			}
+			else if (distance_right < 5)
 			{
 				setMotor(MOTOR_STOP);
 			}
-			else{
-				setSpeed(3);
+			else
+			{
+				setSpeed(SPEED_SLOW);
 				setMotor(MOTOR_LEFT);
 			}
-
-
 		}
 		if (distance_left < 15)
 		{
 
-			if (distance_left < 5)
+			if (distance_left < 10)
+			{
+				//auf der Stelle drehen
+			}
+			else if (distance_left < 5)
 			{
 				setMotor(MOTOR_STOP);
 			}
-			else{
-				setSpeed(3);
+			else
+			{
+				setSpeed(SPEED_SLOW);
 				setMotor(MOTOR_RIGHT);
 			}
-
 
 		}
 
