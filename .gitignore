@@ -1,9 +1,9 @@
 #Qt-Creator
-*.config
-*.creator
-*.creator.user
-*.files
-*.includes
+#*.config
+#*.creator
+#*.creator.user
+#*.files
+#*.includes
 
 # binaries
 *.o
