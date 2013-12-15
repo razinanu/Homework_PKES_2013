@@ -10,11 +10,13 @@ void loop();
 int8_t checkButtons();
 void displaySpiritLevel(int16_t acc_x, int16_t acc_y, int16_t acc_z);
 uint8_t linearizeDistance(uint16_t distanceRaw);
-void displayDistance (int8_t dist);
+void displayDistance(int8_t dist);
 uint16_t readADC(int8_t channel);
 void writetoDisplay(char digit1, char digit2, char digit3);
 uint8_t displayMask(char val);
 const int NUM_READS = 10;
+float sortedValues[NUM_READS];
+int buffer = 0;
 
 char flydurinoPtr[sizeof(Flydurino)];
 // aktuelle Beschleunigungswerte, Kompassmessungen
@@ -26,7 +28,7 @@ float current_rot_deg, sum_rot;
 int8_t modus;
 // Kanal des ADC Wandlers
 // -------------------------------------------------------------
-int8_t channelLeft =2; // korrekte Werte bestimmen !
+int8_t channelLeft = 2;
 int8_t channelRight = 3;
 // -------------------------------------------------------------
 // Laufzeit des Programms
@@ -40,17 +42,16 @@ bool turnBack = false;
 enum motorMode
 {
   MOTOR_FORWARD,
-  MOTOR_LEFT_TURN,
-  MOTOR_RIGHT_TURN,
-  MOTOR_STOP,
-    MOTOR_LEFT,
-    MOTOR_RIGHT
+  MOTOR_LEFT,
+  MOTOR_RIGHT,
+  MOTOR_STOP
 };
 
 // the setup routine runs once when you press reset:
-void setup() {
-  // initialize serial communication
-  Serial.begin(9600);
+void setup()
+{
+	// initialize serial communication
+	Serial.begin(9600);
 
 	Serial.println("----------------------------------");
 	Serial.println("PKES Wintersemester 2013/14");
@@ -88,14 +89,14 @@ void setup() {
 	// S2 as input
 	DDRG &= ~(1 << DDG5);
 
-  // Configuration of ADC
-  // -----------------------------------------------------
-  analogReference(INTERNAL2V56);
-  // -----------------------------------------------------
+	// Configuration of ADC
+	// -----------------------------------------------------
+	analogReference(INTERNAL2V56);
+	// -----------------------------------------------------
 
-  // Configure buttons
-  // -----------------------------------------------------
-  digitalRead(4);  // S1
+	// Configure buttons
+	// -----------------------------------------------------
+	digitalRead(4); // S1
 
   //  Configure PWM
   //  Digital 11 | OC1A:
@@ -163,45 +164,25 @@ void displayDegrees()
 
 void setMotor(int motorMode)
 {
-    switch(motorMode){
+  switch(motorMode){
     case MOTOR_FORWARD:
-        TCCR1A  |= (1<<COM1A1 | 1<<COM1A0);
-        TCCR3A  |= (1<<COM3C1 | 1<<COM3C0);
-        digitalWrite(13,HIGH);
-        digitalWrite(12,HIGH);
-        break;
-    case MOTOR_LEFT_TURN:
-        Serial.print("links");
-        TCCR1A  |= (1<<COM1A1 | 1<<COM1A0);
-        TCCR3A  &= ~(1<<COM3C1 | 1<<COM3C0);
-        digitalWrite(13,HIGH);
-        digitalWrite(12,HIGH);
-        break;
-    case MOTOR_RIGHT_TURN:
-        Serial.print("rechts");
-        TCCR1A  &= ~(1<<COM1A1 | 1<<COM1A0);
-        TCCR3A  |= (1<<COM3C1 | 1<<COM3C0);
-        digitalWrite(13,HIGH);
-        digitalWrite(12,HIGH);
-        break;
+      TCCR1A  |= (1<<COM1A1 | 1<<COM1A0);
+      TCCR3A  |= (1<<COM3C1 | 1<<COM3C0);
+      break;
     case MOTOR_LEFT:
-        TCCR1A  |= (1<<COM1A1 | 1<<COM1A0);
-        TCCR3A  |= (1<<COM3C1 | 1<<COM3C0);
-        digitalWrite(13,HIGH);
-        digitalWrite(12,LOW);
-        break;
+      Serial.print("links");
+      TCCR1A  |= (1<<COM1A1 | 1<<COM1A0);
+      TCCR3A  &= ~(1<<COM3C1 | 1<<COM3C0);
+      break;
     case MOTOR_RIGHT:
-        TCCR1A  |= (1<<COM1A1 | 1<<COM1A0);
-        TCCR3A  |= (1<<COM3C1 | 1<<COM3C0);
-        digitalWrite(13,LOW);
-        digitalWrite(12,HIGH);
-        break;
+      Serial.print("rechts");
+      TCCR1A  &= ~(1<<COM1A1 | 1<<COM1A0);
+      TCCR3A  |= (1<<COM3C1 | 1<<COM3C0);
+      break;
     default:
-        TCCR1A  &= ~(1<<COM1A1 | 1<<COM1A0);
-        TCCR3A  &= ~(1<<COM3C1 | 1<<COM3C0);
-        digitalWrite(13,HIGH);
-        digitalWrite(12,HIGH);
-        break;
+      TCCR1A  &= ~(1<<COM1A1 | 1<<COM1A0);
+      TCCR3A  &= ~(1<<COM3C1 | 1<<COM3C0);
+      break;
     }
 }
 
@@ -234,6 +215,7 @@ void loop() {
       // Substract Offset
       rot_z -= rot_z_offset;
       /**/
+
       /*FS_SEL | Full Scale Range   | LSB Sensitivity
         -------+--------------------+----------------
         0      | +/- 250 degrees/s  | 131 LSB/deg/s
@@ -261,11 +243,13 @@ void loop() {
       double secs = (double)deltaTime/1000;
       current_rot_deg=rot_z*(secs);
       sum_rot=sum_rot+current_rot_deg;
-      //Serial.print(" sum_rot: ");Serial.print(sum_rot); Serial.print("\t");
-
-      if(rot_z <= 10){
-        countZeros++;
-      }
+      Serial.print(" sum_rot: ");Serial.print(sum_rot); Serial.print("\t");
+      if(abs(sum_rot) > 10)
+        {
+          if(sum_rot > 0)
+            {
+              setMotor(MOTOR_RIGHT);
+            }
 
       Serial.print("zero: ");Serial.print(countZeros);
         Serial.print("R Z: ");Serial.print(rot_z); Serial.print("\t");
@@ -288,7 +272,6 @@ void loop() {
                   setMotor(MOTOR_LEFT);
               }
           }
-          else
           {
               setMotor(MOTOR_STOP);
               turnBack = false;
@@ -323,6 +306,16 @@ void loop() {
 		Serial.print("LEFT: ");
 		Serial.print(distance_left);
 		Serial.print("\r\n");
+
+
+   if(distance_right<10){
+	   setMotor(MOTOR_LEFT);
+
+   }
+   if (distance_left<10){
+ 	   setMotor(MOTOR_RIGHT);
+
+    }
 
 		// Motor control
 		// -----------------------------------------------------
@@ -393,44 +386,70 @@ uint16_t readADC(int8_t channel)
 	// Mittelwertbildung
 	// -----------------------------------------------------
 
-	int sortedValues[NUM_READS];
-	for (int i = 0; i < NUM_READS; i++)
-	{
-		int value = analogRead(channel);
-		int j;
-		if (value < sortedValues[0] || i == 0)
+	int sum=0;
+//	if(buffer==NUM_READS){
+//		buffer=1;
+//	}
+//	if (buffer == 0)
+//	{
+		for (int i = 0; i < NUM_READS; i++)
 		{
-			j = 0; //insert at first position
-		}
-		else
-		{
-			for (j = 1; j < i; j++)
-			{
-				if (sortedValues[j - 1] <= value && sortedValues[j] >= value)
-				{
-					// j is insert position
-					break;
-				}
-			}
-		}
-		for (int k = i; k > j; k--)
-		{
-			// move all values higher than current reading up one position
-			sortedValues[k] = sortedValues[k - 1];
-		}
-		sortedValues[j] = value; //insert current reading
-	}
+			sortedValues[i] = analogRead(channel);
 
-	for (int i = NUM_READS / 2 - 5; i < (NUM_READS / 2 + 5); i++)
-	{
-		distance_raw += sortedValues[i];
+		}
+
+//	}
+//	else
+//	{
+//      sortedValues[buffer-1]=analogRead(channel);
+//	}
+
+	for(int i=0; i<NUM_READS;i++){
+		sum += sortedValues[i];
 	}
-	distance_raw = distance_raw / 10;
+	//buffer++;
+//	for (int i = 0; i < NUM_READS; i++)
+//	{
+//		int value = analogRead(channel);
+//		int j;
+//		if (value < sortedValues[0] || i == 0)
+//		{
+//			j = 0; //insert at first position
+//		}
+//		else
+//		{
+//			for (j = 1; j < i; j++)
+//			{
+//				if (sortedValues[j - 1] <= value && sortedValues[j] >= value)
+//				{
+//					// j is insert position
+//					break;
+//				}
+//			}
+//		}
+//		for (int k = i; k > j; k--)
+//		{
+//			// move all values higher than current reading up one position
+//			sortedValues[k] = sortedValues[k - 1];
+//		}
+//		sortedValues[j] = value; //insert current reading
+//	}
+//	for (int i = 0; i < NUM_READS; i++)
+//	{
+//
+//	}
+
+//	for (int i = NUM_READS / 2 - 5; i < (NUM_READS / 2 + 5); i++)
+//	{
+//		distance_raw += sortedValues[i];
+//	}
+	distance_raw = sum / NUM_READS;
 
 	return distance_raw;
 }
 
-void writetoDisplay(char digit1, char digit2, char digit3){
+void writetoDisplay(char digit1, char digit2, char digit3)
+{
 
   char stream[36];
   stream[0]=1;
