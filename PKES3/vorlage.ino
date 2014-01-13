@@ -39,8 +39,16 @@ unsigned long deltaTime;
 int countZeros =0;
 bool turnBack = false;
 
-volatile int ticksLeft;
-volatile int ticksRight;
+volatile int ticksLeft = 0;
+volatile int ticksRight = 0;
+
+double distanceLeft = 0;
+double distanceRight = 0;
+
+//cm
+const double kc = (3.14159265*5)/120;
+
+bool turned = false;
 
 enum motorMode
 {
@@ -61,18 +69,11 @@ enum speed
 
 // Install the interrupt routine.
 ISR(INT4_vect) {
-    ticksLeft++;
     ticksRight++;
 }
 
-ISR(PCI1_vect) {
+ISR(PCINT0_vect) {
     ticksLeft++;
-    ticksRight++;
-}
-
-void countTicks(){
-    ticksLeft++;
-    ticksRight++;
 }
 
 // the setup routine runs once when you press reset:
@@ -168,12 +169,13 @@ d      Timer/Counter3 Output Compare C. The pin has to be configured as an outpu
   ((Flydurino*)flydurinoPtr)->setDLPFMode(6);
   // -----------------------------------------------------
   // turn on interrupts
-    pinMode(2,INPUT);
-    pinMode(10,INPUT);
+//    pinMode(2,INPUT);
+//    pinMode(10,INPUT);
     PCICR = (1<<PCIE0);
-    PCICR = (1<<PCIE1);
-    PCMSK0 = (1<<PCINT0);
-    PCMSK1 = (1<<PCINT8);
+    PCMSK0 = (1<<PCINT4);
+
+    EICRB = (1<<ISC40);
+    EIMSK = (1<<INT4);
     sei();
 //      EICRA = (1 << ISC01 | 1<<ISC00);
   // -----------------------------------------------------
@@ -455,20 +457,28 @@ void motorTask()
 
 void turnTask()
 {
-    Serial.print("RIGHT: ");
-    Serial.print(ticksRight);
-    Serial.print("\t");
-    Serial.print("LEFT: ");
-    Serial.print(ticksLeft);
-    Serial.print("\r\n");
-//    ticksLeft = 0;
-//    ticksRight = 0;
-    // calculate moved distance
-    // integrate
-    // turn
+    setSpeed(SPEED_SLOW);
+    setMotor(MOTOR_FORWARD);
+    // calculate moved distance and integrate
+    distanceLeft += kc * (double)ticksLeft * 0.5;
+    distanceRight += kc * (double)ticksRight * 0.5;
+
+    // turn after 50
+    if(!turned & ((distanceLeft+distanceRight)/2) > 50.0){
+
+    }
     // drive back
     // stop
-    //delay(200);
+    Serial.print("LEFT: ");
+    Serial.print(distanceLeft);
+    Serial.print(" cm\t");
+    Serial.print("RIGHT: ");
+    Serial.print(distanceRight);
+    Serial.print(" cm\r\n");
+
+    ticksLeft = 0;
+    ticksRight = 0;
+    delay(200);
 }
 
 void loop()
@@ -513,7 +523,6 @@ int8_t checkButtons(){
     }
   if(modus!=modus_new)
     {
-      Serial.print(modus);Serial.print("\t");Serial.print(modus_new);
       setMotor(MOTOR_STOP);
     }
   return modus_new;
