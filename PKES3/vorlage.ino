@@ -39,6 +39,9 @@ unsigned long deltaTime;
 int countZeros =0;
 bool turnBack = false;
 
+volatile int ticksLeft;
+volatile int ticksRight;
+
 enum motorMode
 {
   MOTOR_FORWARD,
@@ -56,6 +59,22 @@ enum speed
 
 };
 
+// Install the interrupt routine.
+ISR(INT4_vect) {
+    ticksLeft++;
+    ticksRight++;
+}
+
+ISR(PCI1_vect) {
+    ticksLeft++;
+    ticksRight++;
+}
+
+void countTicks(){
+    ticksLeft++;
+    ticksRight++;
+}
+
 // the setup routine runs once when you press reset:
 void setup()
 {
@@ -67,10 +86,10 @@ void setup()
 	Serial.println("Vorlage 3. Aufgabe ");
 	Serial.println("----------------------------------\r\n");
 
-	// -------------------------------------------------------------
-	// Single Onboard LED configuration
-	// -------------------------------------------------------------
-	// set leds LED_X as output
+    // -------------------------------------------------------------
+    // Single Onboard LED configuration
+    // -------------------------------------------------------------
+    // set leds LED_X as output
 	// alternative
 	//     - intermediate
 	//       DDRA=1+2+4+8;
@@ -147,7 +166,16 @@ d      Timer/Counter3 Output Compare C. The pin has to be configured as an outpu
   // Tobi: This sets the Digital Low Pass Filter on the MPU6050
   // mode 6 is the strongest Filter and should make everything smoother
   ((Flydurino*)flydurinoPtr)->setDLPFMode(6);
-
+  // -----------------------------------------------------
+  // turn on interrupts
+    pinMode(2,INPUT);
+    pinMode(10,INPUT);
+    PCICR = (1<<PCIE0);
+    PCICR = (1<<PCIE1);
+    PCMSK0 = (1<<PCINT0);
+    PCMSK1 = (1<<PCINT8);
+    sei();
+//      EICRA = (1 << ISC01 | 1<<ISC00);
   // -----------------------------------------------------
   lastTime = millis();
   modus=0;
@@ -239,6 +267,210 @@ void setMotor(int motorMode)
     }
 }
 
+void gyroTask()
+{
+    // Receive acceleromation values
+    ((Flydurino*)flydurinoPtr)->getAcceleration(&acc_x, &acc_y, &acc_z);
+    // Get compass data
+    ((Flydurino*)flydurinoPtr)->getOrientation(&ori_x, &ori_y, &ori_z);
+    // Get gyro data
+    ((Flydurino*)flydurinoPtr)->getRotationalSpeed(&rot_x, &rot_y, &rot_z);
+
+    /*Empirically determined Offset:
+      Offset 81 was determined with ~1200 Samples and MPU6050 Digital Low Pass Mode 6*/
+    int16_t rot_z_offset = 81;
+    // Substract Offset
+    rot_z -= rot_z_offset;
+    /**/
+
+    /*FS_SEL | Full Scale Range   | LSB Sensitivity
+      -------+--------------------+----------------
+      0      | +/- 250 degrees/s  | 131 LSB/deg/s
+      1      | +/- 500 degrees/s  | 65.5 LSB/deg/s
+      2      | +/- 1000 degrees/s | 32.8 LSB/deg/s
+      3      | +/- 2000 degrees/s | 16.4 LSB/deg/s */
+    uint8_t fs_sel = ((Flydurino*)flydurinoPtr)->getFullScaleGyroRange();
+    switch(fs_sel)
+      {
+      case 0:
+        rot_z = (int16_t)(rot_z/131);
+        break;
+      case 1:
+        rot_z = (int16_t)(rot_z/65.5);
+        break;
+      case 2:
+        rot_z = (int16_t)(rot_z/32.8);
+        break;
+      case 3:
+        rot_z = (int16_t)(rot_z/16.4);
+        break;
+      }
+
+
+      // Integration
+      double secs = (double) deltaTime / 1000;
+      current_rot_deg = rot_z * (secs);
+      sum_rot = sum_rot + current_rot_deg;
+      Serial.print("zeros: ");
+      Serial.print(countZeros);
+      Serial.print("\t");
+
+      if(current_rot_deg == 0)
+      {
+          countZeros++;
+      }else
+      {
+          countZeros = 0;
+      }
+
+    if(countZeros == 20){
+          countZeros = 0;
+          turnBack = true;
+    }
+
+    if(turnBack)
+    {
+      if (abs(sum_rot) > 10)
+      {
+          if (sum_rot > 0)
+          {
+
+              if (sum_rot > 50)
+              {
+                  setSpeed(SPEED_HIGH);
+                  setMotor(MOTOR_ROTATE_RIGHT);
+              }else
+              if (sum_rot > 30)
+              {
+                  setSpeed(SPEED_MEDIUM);
+                  setMotor(MOTOR_ROTATE_RIGHT);
+              }else
+              if (sum_rot > 20)
+              {
+                  setSpeed(SPEED_SLOW);
+                  setMotor(MOTOR_ROTATE_RIGHT);
+              }
+
+          }
+          else
+          {
+              if (abs(sum_rot) > 50)
+              {
+                  setSpeed(SPEED_HIGH);
+                  setMotor(MOTOR_ROTATE_LEFT);
+              }else
+              if (abs(sum_rot) > 30)
+              {
+                  setSpeed(SPEED_MEDIUM);
+                  setMotor(MOTOR_ROTATE_LEFT);
+              }else
+              if (abs(sum_rot) > 20)
+              {
+                  setSpeed(SPEED_SLOW);
+                  setMotor(MOTOR_ROTATE_LEFT);
+              }
+          }
+      }
+      else
+      {
+          setMotor(MOTOR_STOP);
+          turnBack = false;
+      }
+  }
+
+      //display degrees divided by ten
+      displayDegrees();
+      /*
+       Serial.print("fs_sel: ");Serial.print(fs_sel);
+       Serial.print(" sum_rot: ");Serial.print(sum_rot); Serial.print("\t");
+       Serial.print(rot_x); Serial.print("\t");
+       Serial.print(rot_y); Serial.print("\t");
+       Serial.print("R Z: ");Serial.print(rot_z); Serial.print("\t");
+       Serial.print("C Z: ");Serial.print(current_rot_deg);Serial.print("\t");
+       Serial.print("secs: ");Serial.print(secs);Serial.print("\t");
+       Serial.print("dT: ");Serial.print(deltaTime);//Serial.print();
+       /**/
+      Serial.print("\r\n");
+      delay(200);
+}
+
+void motorTask()
+{
+    setSpeed(SPEED_HIGH);
+    setMotor(MOTOR_FORWARD);
+
+    uint8_t distance_left, distance_right;
+    distance_right = linearizeDistance(readADC(channelRight));
+    distance_left = linearizeDistance(readADC(channelLeft));
+
+    Serial.print("RIGHT: ");
+    Serial.print(distance_right);
+    Serial.print("\t");
+    Serial.print("LEFT: ");
+    Serial.print(distance_left);
+    Serial.print("\r\n");
+
+    if (distance_right < 15)
+    {
+        if (distance_right < 10)
+        {
+            setMotor(MOTOR_ROTATE_LEFT);
+        }
+    //			else if (distance_right < 5)
+    //			{
+    //				setMotor(MOTOR_STOP);
+    //			}
+        else{
+            setSpeed(SPEED_SLOW);
+            setMotor(MOTOR_TURN_LEFT);
+        }
+
+
+    }
+    if (distance_left < 15)
+    {
+
+        if (distance_left < 10)
+        {
+            setMotor(MOTOR_ROTATE_RIGHT);
+        }
+    //			else if (distance_left < 5)
+    //			{
+    //				setMotor(MOTOR_STOP);
+    //			}
+        else{
+            setSpeed(SPEED_SLOW);
+            setMotor(MOTOR_TURN_RIGHT);
+        }
+
+
+    }
+
+    // Motor control
+    // -----------------------------------------------------
+
+    // -----------------------------------------------------
+    delay(50);
+}
+
+void turnTask()
+{
+    Serial.print("RIGHT: ");
+    Serial.print(ticksRight);
+    Serial.print("\t");
+    Serial.print("LEFT: ");
+    Serial.print(ticksLeft);
+    Serial.print("\r\n");
+//    ticksLeft = 0;
+//    ticksRight = 0;
+    // calculate moved distance
+    // integrate
+    // turn
+    // drive back
+    // stop
+    //delay(200);
+}
+
 void loop()
 {
     currentTime = millis();
@@ -259,188 +491,12 @@ void loop()
   // Gyro task
   if (modus==1)
   {
-      // Receive acceleromation values
-      ((Flydurino*)flydurinoPtr)->getAcceleration(&acc_x, &acc_y, &acc_z);
-      // Get compass data
-      ((Flydurino*)flydurinoPtr)->getOrientation(&ori_x, &ori_y, &ori_z);
-      // Get gyro data
-      ((Flydurino*)flydurinoPtr)->getRotationalSpeed(&rot_x, &rot_y, &rot_z);
-
-      /*Empirically determined Offset:
-        Offset 81 was determined with ~1200 Samples and MPU6050 Digital Low Pass Mode 6*/
-      int16_t rot_z_offset = 81;
-      // Substract Offset
-      rot_z -= rot_z_offset;
-      /**/
-
-      /*FS_SEL | Full Scale Range   | LSB Sensitivity
-        -------+--------------------+----------------
-        0      | +/- 250 degrees/s  | 131 LSB/deg/s
-        1      | +/- 500 degrees/s  | 65.5 LSB/deg/s
-        2      | +/- 1000 degrees/s | 32.8 LSB/deg/s
-        3      | +/- 2000 degrees/s | 16.4 LSB/deg/s */
-      uint8_t fs_sel = ((Flydurino*)flydurinoPtr)->getFullScaleGyroRange();
-      switch(fs_sel)
-        {
-        case 0:
-          rot_z = (int16_t)(rot_z/131);
-          break;
-        case 1:
-          rot_z = (int16_t)(rot_z/65.5);
-          break;
-        case 2:
-          rot_z = (int16_t)(rot_z/32.8);
-          break;
-        case 3:
-          rot_z = (int16_t)(rot_z/16.4);
-          break;
-        }
-
-
-		// Integration
-		double secs = (double) deltaTime / 1000;
-		current_rot_deg = rot_z * (secs);
-		sum_rot = sum_rot + current_rot_deg;
-        Serial.print("zeros: ");
-        Serial.print(countZeros);
-		Serial.print("\t");
-
-        if(current_rot_deg == 0)
-        {
-            countZeros++;
-        }else
-        {
-            countZeros = 0;
-        }
-
-      if(countZeros == 20){
-            countZeros = 0;
-            turnBack = true;
-      }
-
-      if(turnBack)
-      {
-		if (abs(sum_rot) > 10)
-		{
-			if (sum_rot > 0)
-			{
-
-				if (sum_rot > 50)
-				{
-					setSpeed(SPEED_HIGH);
-                    setMotor(MOTOR_ROTATE_RIGHT);
-                }else
-				if (sum_rot > 30)
-				{
-					setSpeed(SPEED_MEDIUM);
-                    setMotor(MOTOR_ROTATE_RIGHT);
-                }else
-				if (sum_rot > 20)
-				{
-					setSpeed(SPEED_SLOW);
-                    setMotor(MOTOR_ROTATE_RIGHT);
-                }
-
-			}
-			else
-			{
-				if (abs(sum_rot) > 50)
-				{
-					setSpeed(SPEED_HIGH);
-                    setMotor(MOTOR_ROTATE_LEFT);
-                }else
-				if (abs(sum_rot) > 30)
-				{
-					setSpeed(SPEED_MEDIUM);
-                    setMotor(MOTOR_ROTATE_LEFT);
-                }else
-				if (abs(sum_rot) > 20)
-				{
-					setSpeed(SPEED_SLOW);
-                    setMotor(MOTOR_ROTATE_LEFT);
-                }
-			}
-		}
-		else
-		{
-			setMotor(MOTOR_STOP);
-			turnBack = false;
-		}
-	}
-
-		//display degrees divided by ten
-		displayDegrees();
-		/*
-		 Serial.print("fs_sel: ");Serial.print(fs_sel);
-		 Serial.print(" sum_rot: ");Serial.print(sum_rot); Serial.print("\t");
-		 Serial.print(rot_x); Serial.print("\t");
-		 Serial.print(rot_y); Serial.print("\t");
-		 Serial.print("R Z: ");Serial.print(rot_z); Serial.print("\t");
-		 Serial.print("C Z: ");Serial.print(current_rot_deg);Serial.print("\t");
-		 Serial.print("secs: ");Serial.print(secs);Serial.print("\t");
-		 Serial.print("dT: ");Serial.print(deltaTime);//Serial.print();
-		 /**/
-		Serial.print("\r\n");
-		delay(200);
+      gyroTask();
 	}
 	// Driving without any collision
 	if (modus == 2)
 	{
-		setSpeed(SPEED_HIGH);
-		setMotor(MOTOR_FORWARD);
-
-		uint8_t distance_left, distance_right;
-		distance_right = linearizeDistance(readADC(channelRight));
-		distance_left = linearizeDistance(readADC(channelLeft));
-
-		Serial.print("RIGHT: ");
-		Serial.print(distance_right);
-		Serial.print("\t");
-		Serial.print("LEFT: ");
-		Serial.print(distance_left);
-		Serial.print("\r\n");
-
-		if (distance_right < 13)
-		{
-			if (distance_right < 10)
-			{
-				setMotor(MOTOR_ROTATE_LEFT);
-			}
-//			else if (distance_right < 5)
-//			{
-//				setMotor(MOTOR_STOP);
-//			}
-			else{
-				setSpeed(SPEED_SLOW);
-                setMotor(MOTOR_TURN_LEFT);
-			}
-
-
-		}
-		if (distance_left < 15)
-		{
-
-			if (distance_left < 10)
-			{
-				setMotor(MOTOR_ROTATE_RIGHT);
-			}
-//			else if (distance_left < 5)
-//			{
-//				setMotor(MOTOR_STOP);
-//			}
-			else{
-				setSpeed(SPEED_SLOW);
-                setMotor(MOTOR_TURN_RIGHT);
-			}
-
-
-		}
-
-		// Motor control
-		// -----------------------------------------------------
-
-		// -----------------------------------------------------
-		delay(50);
+        turnTask();
 	}
 	modus = checkButtons();
 }
