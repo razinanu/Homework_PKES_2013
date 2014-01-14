@@ -22,6 +22,9 @@ void regler();
 const int NUM_READS = 10;
 float sortedValues[NUM_READS];
 int buffer = 0;
+float differLeft = 0;
+int fisrtTick = 0;
+int turnValue=325;
 
 char flydurinoPtr[sizeof(Flydurino)];
 // aktuelle Beschleunigungswerte, Kompassmessungen
@@ -54,9 +57,11 @@ double distanceRight = 0;
 const double kc = (3.14159265 * 5) / 120;
 
 bool turned = false;
-bool startdegree = true;
+bool startTick = true;
 float startValue;
 float targetValue;
+float speedLeft = 0;
+float speedRight = 0;
 
 enum motorMode
 {
@@ -65,11 +70,13 @@ enum motorMode
 	MOTOR_TURN_RIGHT,
 	MOTOR_STOP,
 	MOTOR_ROTATE_LEFT,
-	MOTOR_ROTATE_RIGHT
+	MOTOR_ROTATE_RIGHT,
+	MOTOR_JUST_LEFT,
+	MOTOR_JUST_RIGHT
 };
 enum speed
 {
-    SPEED_HIGH, SPEED_MEDIUM, SPEED_SLOW,SPEED_VERY_SLOW
+	SPEED_HIGH, SPEED_MEDIUM, SPEED_SLOW, SPEED_VERY_SLOW
 };
 
 // Install the interrupt routine.
@@ -223,19 +230,20 @@ void setSpeed(int speedMode)
 
 	case SPEED_HIGH:
 		OCR1A = 90;
-		OCR3C = 90;
+		OCR3C = 90 + 1.5 * differLeft;
 		break;
 	case SPEED_MEDIUM:
 		OCR1A = 120;
-		OCR3C = 120;
+		OCR3C = 120 + 1.5 * differLeft;
 		break;
 	case SPEED_SLOW:
 		OCR1A = 150;
-		OCR3C = 150;
+		OCR3C = 150 + 1.5* differLeft;
 		break;
-    case SPEED_VERY_SLOW:
-        OCR1A = 160;
-        OCR3C = 160;
+	case SPEED_VERY_SLOW:
+		OCR1A = 160;
+		OCR3C = 160 + 1.5 * differLeft;
+		break;
 	}
 }
 
@@ -275,6 +283,7 @@ void setMotor(int motorMode)
 		digitalWrite(13, LOW);
 		digitalWrite(12, HIGH);
 		break;
+
 	default:
 		TCCR1A &= ~(1 << COM1A1 | 1 << COM1A0);
 		TCCR3A &= ~(1 << COM3C1 | 1 << COM3C0);
@@ -286,9 +295,9 @@ void setMotor(int motorMode)
 
 void calculateGyro()
 {
-    currentTime = millis();
-    deltaTime = currentTime - lastTime;
-    lastTime = currentTime;
+	currentTime = millis();
+	deltaTime = currentTime - lastTime;
+	lastTime = currentTime;
 	// Receive acceleromation values
 	((Flydurino*) (flydurinoPtr))->getAcceleration(&acc_x, &acc_y, &acc_z);
 	// Get compass data
@@ -474,123 +483,155 @@ void motorTask()
 
 void turnTask()
 {
-
-	setSpeed(SPEED_SLOW);
-	setMotor(MOTOR_FORWARD);
-	// calculate moved distance and integrate
-	distanceLeft += kc * (double) ticksLeft * 0.5;
-	distanceRight += kc * (double) ticksRight * 0.5;
-    displayDegrees();
-	// turn after 50
-	if (!turned && ((distanceLeft + distanceRight) / 2) > 50.0)
-	{
-       if(startdegree){
-           startValue=sum_rot;
-           //targetValue = sum_rot+180;
-           startdegree=false;
-       }
-     float  differntValue=sum_rot-startValue;
-     if(differntValue!=0){
-     if(differntValue>0){
-       if( abs(startValue-sum_rot)>90 && abs(startValue-sum_rot)<180){
-           setSpeed(SPEED_SLOW);
-           setMotor(MOTOR_ROTATE_LEFT);
-       }
-       else if(abs(startValue-sum_rot)<90){
-            setSpeed(SPEED_VERY_SLOW);
-            setMotor(MOTOR_ROTATE_LEFT);
-        }
-     }
-     else{
-    	   if( abs(startValue-sum_rot)>90 && abs(startValue-sum_rot)<180){
-    	           setSpeed(SPEED_SLOW);
-    	           setMotor(MOTOR_ROTATE_RIGHT);
-    	       }
-    	       else if(abs(startValue-sum_rot)<90){
-    	            setSpeed(SPEED_VERY_SLOW);
-    	            setMotor(MOTOR_ROTATE_RIGHT);
-    	        }
-
-     }
-     }
-     else{
-            startdegree=true;
-            turned=true;
-        }
-	  }
-
-
-
-//        setSpeed(SPEED_VERY_SLOW);
-//        setMotor(MOTOR_ROTATE_LEFT);
-//        turned = true;
-//        targetSumRot = sum_rot;
-//        while (abs(sum_rot) < 150)
-//        {
-//            calculateGyro();
-//            displayDegrees();
-
-//            if (abs(sum_rot) > 10)
-//            {
-//                if (sum_rot > 0)
-//                {
-
-//                    if (sum_rot > 50)
-//                    {
-//                        setSpeed(SPEED_HIGH);
-//                        setMotor(MOTOR_ROTATE_RIGHT);
-//                    }
-//                    else if (sum_rot > 30)
-//                    {
-//                        setSpeed(SPEED_MEDIUM);
-//                        setMotor(MOTOR_ROTATE_RIGHT);
-//                    }
-//                    else if (sum_rot > 20)
-//                    {
-//                        setSpeed(SPEED_SLOW);
-//                        setMotor(MOTOR_ROTATE_RIGHT);
-//                    }
-
-//                }
-//                else
-//                {
-//                    if (abs(sum_rot) > 50)
-//                    {
-//                        setSpeed(SPEED_HIGH);
-//                        setMotor(MOTOR_ROTATE_LEFT);
-//                    }
-//                    else if (abs(sum_rot) > 30)
-//                    {
-//                        setSpeed(SPEED_MEDIUM);
-//                        setMotor(MOTOR_ROTATE_LEFT);
-//                    }
-//                    else if (abs(sum_rot) > 20)
-//                    {
-//                        setSpeed(SPEED_SLOW);
-//                        setMotor(MOTOR_ROTATE_LEFT);
-//                    }
-//                }
-//            }
-//            else
-//            {
-//                setMotor(MOTOR_STOP);
-//                turnBack = false;
-//            }
-
-//            delay(200);
-//		}
+//
+//    if(!turned){
+//    	unsigned long currentTime=millis();
 //        setSpeed(SPEED_SLOW);
 //        setMotor(MOTOR_FORWARD);
-//        return;
+//        // calculate moved distance and integrate
+//        distanceLeft += kc * (double) ticksLeft * 0.5;
+//        unsigned long lastTime=millis();
+//        unsigned long differTime=lastTime-currentTime;
+//        speedLeft=distanceLeft/differTime;
+//        Serial.print("SPEED Left: ");
+//         Serial.print(speedLeft);
+//        distanceRight += kc * (double) ticksRight * 0.5;
+//        speedRight=distanceRight/currentTime;
+//        if(abs(distanceLeft-distanceRight)<5){
+//        	if(distanceRight>distanceRight){
+//        		differLeft=abs(speedLeft-speedRight);
+//        	}
+//        	else{
+//        		differRight=abs(speedLeft-speedRight);
+//        	}
+//        }
+//        displayDegrees();
+//        // turn after 50
+//        if (!turned && ((distanceLeft + distanceRight) / 2) > 50.0)
+//        {
+//           if(startdegree){
+//                //           startValue=sum_rot;
+//                targetValue = sum_rot+180;
+//                startdegree=false;
+//                setSpeed(SPEED_VERY_SLOW);
+//                setMotor(MOTOR_ROTATE_LEFT);
+//            }
+//
+//            //       if( abs(startValue-sum_rot)>90 && abs(startValue-sum_rot)<180){
+//            //           setSpeed(SPEED_SLOW);
+//            //           setMotor(MOTOR_ROTATE_LEFT);
+//            //       }
+//            //        if(abs(startValue-sum_rot)<90){
+//            //            setSpeed(SPEED_VERY_SLOW);
+//            //            setMotor(MOTOR_ROTATE_LEFT);
+//            //        }
+//            //        else{
+//            //            startdegree=true;
+//            //            turned=true;
+//            //        }
+//
+//            //        turned = true;
+//            //        targetSumRot = sum_rot;
+//            while (!turned)
+//            {
+//                calculateGyro();
+//                displayDegrees();
+//                float mySum = targetValue-sum_rot;
+//                if(abs(mySum)>2.5){
+//                    if (mySum > 0)
+//                    {
+//                        setSpeed(SPEED_SLOW);
+//                        setMotor(MOTOR_ROTATE_LEFT);
+//                    }
+//                    else
+//                    {
+//                        setSpeed(SPEED_SLOW);
+//                        setMotor(MOTOR_ROTATE_RIGHT);
+//                    }
+//                }else
+//                {
+//                    turned = true;
+//                    setMotor(MOTOR_STOP);
+//                }
+//
+//                delay(200);
+//                //		}
+//                //        setSpeed(SPEED_SLOW);
+//                //        setMotor(MOTOR_FORWARD);
+//                //        return;
+//            }
+//        }
+//    }else{
+//
+//    	setSpeed(SPEED_SLOW);
+//
+//        setMotor(MOTOR_FORWARD);
+//
+//        // calculate moved distance and integrate
+//        distanceLeft += kc * (double) ticksLeft * 0.5;
+//        distanceRight += kc * (double) ticksRight * 0.5;
+//
+//        displayDegrees();
+//
+//        if (turned && ((distanceLeft + distanceRight) / 2) > 100.0)
+//        {
+//            setMotor(MOTOR_STOP);
+//        }
+//    }
+//    // drive back
+//    // stop
+//    Serial.print("LEFT: ");
+//    Serial.print(distanceLeft);
+//    Serial.print(" cm\t");
+//    Serial.print("SPEED Left: ");
+//    Serial.print(speedLeft);
+//    Serial.print(" \t");
+//    Serial.print("SPEED Right: ");
+//    Serial.print(speedRight);
+//    Serial.print(" \t");
+//    Serial.print("RIGHT: ");
+//    Serial.print(distanceRight);
+//    Serial.print(" cm\r\n");
 
-	// drive back
-	// stop
-	Serial.print("LEFT: ");
-	Serial.print(distanceLeft);
-	Serial.print(" cm\t");
-	Serial.print("RIGHT: ");
-	Serial.print(distanceRight);
-	Serial.print(" cm\r\n");
+	setSpeed(SPEED_MEDIUM);
+	setMotor(MOTOR_FORWARD);
+//	calculateGyro();
+//	displayDegrees();
+	distanceLeft += kc * (double) ticksLeft * 0.5;
+	distanceRight += kc * (double) ticksRight * 0.5;
+	if (ticksLeft != ticksRight)
+	{
+		differLeft = ticksLeft - ticksRight;
+//		Serial.print("Difference: ");
+//		Serial.print(differLeft);
+
+	}
+	// turn after 50
+	if (!turned &&((distanceLeft + distanceRight) / 2) > 50.0)
+	{
+
+		if (startTick)
+		{
+			fisrtTick = ticksLeft;
+			startTick = false;
+		}
+
+		while (abs(startTick-ticksLeft) < turnValue)
+		{
+//			calculateGyro();
+//		    displayDegrees();
+			setSpeed(SPEED_SLOW);
+			setMotor(MOTOR_ROTATE_LEFT);
+
+		}
+		turned=true;
+		setSpeed(SPEED_MEDIUM);
+		setMotor(MOTOR_FORWARD);
+	}
+	  if (turned && ((distanceLeft + distanceRight) / 2) > 100.0)
+        {
+	            setMotor(MOTOR_STOP);
+	     }
 
 	ticksLeft = 0;
 	ticksRight = 0;
@@ -599,8 +640,6 @@ void turnTask()
 
 void regler()
 {
-
-	return;
 
 }
 
