@@ -54,6 +54,9 @@ double distanceRight = 0;
 const double kc = (3.14159265 * 5) / 120;
 
 bool turned = false;
+bool startdegree = true;
+float startValue;
+float targetValue;
 
 enum motorMode
 {
@@ -66,8 +69,7 @@ enum motorMode
 };
 enum speed
 {
-	SPEED_HIGH, SPEED_MEDIUM, SPEED_SLOW,
-
+    SPEED_HIGH, SPEED_MEDIUM, SPEED_SLOW,SPEED_VERY_SLOW
 };
 
 // Install the interrupt routine.
@@ -231,9 +233,10 @@ void setSpeed(int speedMode)
 		OCR1A = 150;
 		OCR3C = 150;
 		break;
-
+    case SPEED_VERY_SLOW:
+        OCR1A = 160;
+        OCR3C = 160;
 	}
-
 }
 
 void setMotor(int motorMode)
@@ -283,6 +286,9 @@ void setMotor(int motorMode)
 
 void calculateGyro()
 {
+    currentTime = millis();
+    deltaTime = currentTime - lastTime;
+    lastTime = currentTime;
 	// Receive acceleromation values
 	((Flydurino*) (flydurinoPtr))->getAcceleration(&acc_x, &acc_y, &acc_z);
 	// Get compass data
@@ -474,17 +480,91 @@ void turnTask()
 	// calculate moved distance and integrate
 	distanceLeft += kc * (double) ticksLeft * 0.5;
 	distanceRight += kc * (double) ticksRight * 0.5;
-
+    displayDegrees();
 	// turn after 50
 	if (!turned && ((distanceLeft + distanceRight) / 2) > 50.0)
 	{
-		while (abs(sum_rot) < 180)
-		{
-			setSpeed(SPEED_SLOW);
-			setMotor(MOTOR_ROTATE_LEFT);
-		}
+//       if(startdegree){
+//           startValue=sum_rot;
+//           targetValue = sum_rot+180;
+//           startdegree=false;
+//       }
+//       if( abs(startValue-sum_rot)>90 && abs(startValue-sum_rot)<180){
+//           setSpeed(SPEED_SLOW);
+//           setMotor(MOTOR_ROTATE_LEFT);
+//       }
+//        if(abs(startValue-sum_rot)<90){
+//            setSpeed(SPEED_VERY_SLOW);
+//            setMotor(MOTOR_ROTATE_LEFT);
+//        }
+//        else{
+//            startdegree=true;
+//            turned=true;
+//        }
 
-	}
+
+//        setSpeed(SPEED_VERY_SLOW);
+//        setMotor(MOTOR_ROTATE_LEFT);
+//        turned = true;
+//        targetSumRot = sum_rot;
+//        while (abs(sum_rot) < 150)
+//        {
+//            calculateGyro();
+//            displayDegrees();
+
+//            if (abs(sum_rot) > 10)
+//            {
+//                if (sum_rot > 0)
+//                {
+
+//                    if (sum_rot > 50)
+//                    {
+//                        setSpeed(SPEED_HIGH);
+//                        setMotor(MOTOR_ROTATE_RIGHT);
+//                    }
+//                    else if (sum_rot > 30)
+//                    {
+//                        setSpeed(SPEED_MEDIUM);
+//                        setMotor(MOTOR_ROTATE_RIGHT);
+//                    }
+//                    else if (sum_rot > 20)
+//                    {
+//                        setSpeed(SPEED_SLOW);
+//                        setMotor(MOTOR_ROTATE_RIGHT);
+//                    }
+
+//                }
+//                else
+//                {
+//                    if (abs(sum_rot) > 50)
+//                    {
+//                        setSpeed(SPEED_HIGH);
+//                        setMotor(MOTOR_ROTATE_LEFT);
+//                    }
+//                    else if (abs(sum_rot) > 30)
+//                    {
+//                        setSpeed(SPEED_MEDIUM);
+//                        setMotor(MOTOR_ROTATE_LEFT);
+//                    }
+//                    else if (abs(sum_rot) > 20)
+//                    {
+//                        setSpeed(SPEED_SLOW);
+//                        setMotor(MOTOR_ROTATE_LEFT);
+//                    }
+//                }
+//            }
+//            else
+//            {
+//                setMotor(MOTOR_STOP);
+//                turnBack = false;
+//            }
+
+//            delay(200);
+//		}
+//        setSpeed(SPEED_SLOW);
+//        setMotor(MOTOR_FORWARD);
+//        return;
+    }
 	// drive back
 	// stop
 	Serial.print("LEFT: ");
@@ -498,6 +578,7 @@ void turnTask()
 	ticksRight = 0;
 	delay(200);
 }
+
 void regler()
 {
 
@@ -507,9 +588,6 @@ void regler()
 
 void loop()
 {
-	currentTime = millis();
-	deltaTime = currentTime - lastTime;
-	lastTime = currentTime;
 	calculateGyro();
 	// default state - avoids crash situations due to suddenly starting
 	// PWM modus
