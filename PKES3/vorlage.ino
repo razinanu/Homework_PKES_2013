@@ -59,9 +59,8 @@ const double kc = (3.14159265 * 5) / 120;
 bool turned = false;
 bool startTick = true;
 float startValue;
-float targetValue;
-float speedLeft = 0;
-float speedRight = 0;
+//float targetValue;
+
 
 enum motorMode
 {
@@ -70,13 +69,11 @@ enum motorMode
 	MOTOR_TURN_RIGHT,
 	MOTOR_STOP,
 	MOTOR_ROTATE_LEFT,
-	MOTOR_ROTATE_RIGHT,
-	MOTOR_JUST_LEFT,
-	MOTOR_JUST_RIGHT
+	MOTOR_ROTATE_RIGHT
 };
 enum speed
 {
-	SPEED_HIGH, SPEED_MEDIUM, SPEED_SLOW, SPEED_VERY_SLOW
+    SPEED_HIGH, SPEED_MEDIUM, SPEED_SLOW,SPEED_VERY_SLOW
 };
 
 // Install the interrupt routine.
@@ -295,9 +292,9 @@ void setMotor(int motorMode)
 
 void calculateGyro()
 {
-	currentTime = millis();
-	deltaTime = currentTime - lastTime;
-	lastTime = currentTime;
+    currentTime = millis();
+    deltaTime = currentTime - lastTime;
+    lastTime = currentTime;
 	// Receive acceleromation values
 	((Flydurino*) (flydurinoPtr))->getAcceleration(&acc_x, &acc_y, &acc_z);
 	// Get compass data
@@ -640,6 +637,8 @@ void turnTask()
 
 void regler()
 {
+
+	return;
 
 }
 
