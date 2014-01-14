@@ -475,108 +475,93 @@ void motorTask()
 void turnTask()
 {
 
-	setSpeed(SPEED_SLOW);
-	setMotor(MOTOR_FORWARD);
-	// calculate moved distance and integrate
-	distanceLeft += kc * (double) ticksLeft * 0.5;
-	distanceRight += kc * (double) ticksRight * 0.5;
-    displayDegrees();
-	// turn after 50
-	if (!turned && ((distanceLeft + distanceRight) / 2) > 50.0)
-	{
-//       if(startdegree){
-//           startValue=sum_rot;
-//           targetValue = sum_rot+180;
-//           startdegree=false;
-//       }
-//       if( abs(startValue-sum_rot)>90 && abs(startValue-sum_rot)<180){
-//           setSpeed(SPEED_SLOW);
-//           setMotor(MOTOR_ROTATE_LEFT);
-//       }
-//        if(abs(startValue-sum_rot)<90){
-//            setSpeed(SPEED_VERY_SLOW);
-//            setMotor(MOTOR_ROTATE_LEFT);
-//        }
-//        else{
-//            startdegree=true;
-//            turned=true;
-//        }
+    if(!turned){
+        setSpeed(SPEED_SLOW);
+        setMotor(MOTOR_FORWARD);
+        // calculate moved distance and integrate
+        distanceLeft += kc * (double) ticksLeft * 0.5;
+        distanceRight += kc * (double) ticksRight * 0.5;
+        displayDegrees();
+        // turn after 50
+        if (!turned && ((distanceLeft + distanceRight) / 2) > 50.0)
+        {
+            if(startdegree){
+                //           startValue=sum_rot;
+                targetValue = sum_rot+180;
+                startdegree=false;
+                setSpeed(SPEED_VERY_SLOW);
+                setMotor(MOTOR_ROTATE_LEFT);
+            }
 
+            //       if( abs(startValue-sum_rot)>90 && abs(startValue-sum_rot)<180){
+            //           setSpeed(SPEED_SLOW);
+            //           setMotor(MOTOR_ROTATE_LEFT);
+            //       }
+            //        if(abs(startValue-sum_rot)<90){
+            //            setSpeed(SPEED_VERY_SLOW);
+            //            setMotor(MOTOR_ROTATE_LEFT);
+            //        }
+            //        else{
+            //            startdegree=true;
+            //            turned=true;
+            //        }
 
-//        setSpeed(SPEED_VERY_SLOW);
-//        setMotor(MOTOR_ROTATE_LEFT);
-//        turned = true;
-//        targetSumRot = sum_rot;
-//        while (abs(sum_rot) < 150)
-//        {
-//            calculateGyro();
-//            displayDegrees();
+            //        turned = true;
+            //        targetSumRot = sum_rot;
+            while (!turned)
+            {
+                calculateGyro();
+                displayDegrees();
+                float mySum = targetValue-sum_rot;
+                if(abs(mySum)>2.5){
+                    if (mySum > 0)
+                    {
+                        setSpeed(SPEED_SLOW);
+                        setMotor(MOTOR_ROTATE_LEFT);
+                    }
+                    else
+                    {
+                        setSpeed(SPEED_SLOW);
+                        setMotor(MOTOR_ROTATE_RIGHT);
+                    }
+                }else
+                {
+                    turned = true;
+                    setMotor(MOTOR_STOP);
+                }
 
-//            if (abs(sum_rot) > 10)
-//            {
-//                if (sum_rot > 0)
-//                {
+                delay(200);
+                //		}
+                //        setSpeed(SPEED_SLOW);
+                //        setMotor(MOTOR_FORWARD);
+                //        return;
+            }
+        }
+    }else{
+        setSpeed(SPEED_SLOW);
+        setMotor(MOTOR_FORWARD);
+        // calculate moved distance and integrate
+        distanceLeft += kc * (double) ticksLeft * 0.5;
+        distanceRight += kc * (double) ticksRight * 0.5;
+        displayDegrees();
 
-//                    if (sum_rot > 50)
-//                    {
-//                        setSpeed(SPEED_HIGH);
-//                        setMotor(MOTOR_ROTATE_RIGHT);
-//                    }
-//                    else if (sum_rot > 30)
-//                    {
-//                        setSpeed(SPEED_MEDIUM);
-//                        setMotor(MOTOR_ROTATE_RIGHT);
-//                    }
-//                    else if (sum_rot > 20)
-//                    {
-//                        setSpeed(SPEED_SLOW);
-//                        setMotor(MOTOR_ROTATE_RIGHT);
-//                    }
-
-//                }
-//                else
-//                {
-//                    if (abs(sum_rot) > 50)
-//                    {
-//                        setSpeed(SPEED_HIGH);
-//                        setMotor(MOTOR_ROTATE_LEFT);
-//                    }
-//                    else if (abs(sum_rot) > 30)
-//                    {
-//                        setSpeed(SPEED_MEDIUM);
-//                        setMotor(MOTOR_ROTATE_LEFT);
-//                    }
-//                    else if (abs(sum_rot) > 20)
-//                    {
-//                        setSpeed(SPEED_SLOW);
-//                        setMotor(MOTOR_ROTATE_LEFT);
-//                    }
-//                }
-//            }
-//            else
-//            {
-//                setMotor(MOTOR_STOP);
-//                turnBack = false;
-//            }
-
-//            delay(200);
-//		}
-//        setSpeed(SPEED_SLOW);
-//        setMotor(MOTOR_FORWARD);
-//        return;
+        if (turned && ((distanceLeft + distanceRight) / 2) > 100.0)
+        {
+            setMotor(MOTOR_STOP);
+        }
     }
-	// drive back
-	// stop
-	Serial.print("LEFT: ");
-	Serial.print(distanceLeft);
-	Serial.print(" cm\t");
-	Serial.print("RIGHT: ");
-	Serial.print(distanceRight);
-	Serial.print(" cm\r\n");
+    // drive back
+    // stop
+    Serial.print("LEFT: ");
+    Serial.print(distanceLeft);
+    Serial.print(" cm\t");
+    Serial.print("RIGHT: ");
+    Serial.print(distanceRight);
+    Serial.print(" cm\r\n");
 
-	ticksLeft = 0;
-	ticksRight = 0;
-	delay(200);
+    ticksLeft = 0;
+    ticksRight = 0;
+    delay(200);
 }
 
 void regler()
