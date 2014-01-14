@@ -484,23 +484,41 @@ void turnTask()
 	// turn after 50
 	if (!turned && ((distanceLeft + distanceRight) / 2) > 50.0)
 	{
-//       if(startdegree){
-//           startValue=sum_rot;
-//           targetValue = sum_rot+180;
-//           startdegree=false;
-//       }
-//       if( abs(startValue-sum_rot)>90 && abs(startValue-sum_rot)<180){
-//           setSpeed(SPEED_SLOW);
-//           setMotor(MOTOR_ROTATE_LEFT);
-//       }
-//        if(abs(startValue-sum_rot)<90){
-//            setSpeed(SPEED_VERY_SLOW);
-//            setMotor(MOTOR_ROTATE_LEFT);
-//        }
-//        else{
-//            startdegree=true;
-//            turned=true;
-//        }
+       if(startdegree){
+           startValue=sum_rot;
+           //targetValue = sum_rot+180;
+           startdegree=false;
+       }
+     float  differntValue=sum_rot-startValue;
+     if(differntValue!=0){
+     if(differntValue>0){
+       if( abs(startValue-sum_rot)>90 && abs(startValue-sum_rot)<180){
+           setSpeed(SPEED_SLOW);
+           setMotor(MOTOR_ROTATE_LEFT);
+       }
+       else if(abs(startValue-sum_rot)<90){
+            setSpeed(SPEED_VERY_SLOW);
+            setMotor(MOTOR_ROTATE_LEFT);
+        }
+     }
+     else{
+    	   if( abs(startValue-sum_rot)>90 && abs(startValue-sum_rot)<180){
+    	           setSpeed(SPEED_SLOW);
+    	           setMotor(MOTOR_ROTATE_RIGHT);
+    	       }
+    	       else if(abs(startValue-sum_rot)<90){
+    	            setSpeed(SPEED_VERY_SLOW);
+    	            setMotor(MOTOR_ROTATE_RIGHT);
+    	        }
+
+     }
+     }
+     else{
+            startdegree=true;
+            turned=true;
+        }
+	  }
+
 
 
 //        setSpeed(SPEED_VERY_SLOW);
@@ -564,7 +582,7 @@ void turnTask()
 //        setSpeed(SPEED_SLOW);
 //        setMotor(MOTOR_FORWARD);
 //        return;
-    }
+
 	// drive back
 	// stop
 	Serial.print("LEFT: ");
