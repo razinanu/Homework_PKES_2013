@@ -4,8 +4,7 @@
 #include "Wire.h"
 #include "Flydurino.h"
 
-void* operator new(size_t s, void* ptr)
-{
+void* operator new(size_t s, void* ptr) {
 	return ptr;
 }
 void setup();
@@ -17,20 +16,29 @@ void displayDistance(int8_t dist);
 uint16_t readADC(int8_t channel);
 void writetoDisplay(char digit1, char digit2, char digit3);
 uint8_t displayMask(char val);
-void regler();
 
 const int NUM_READS = 10;
 float sortedValues[NUM_READS];
 int buffer = 0;
+//4 Aufgabe
 float differLeft = 0;
 int fisrtTick = 0;
-int turnValue=325;
+int turnValue = 350;
+bool turnBack = false;
+bool twoTurned = false;
+bool turned = false;
+bool startTick = true;
+volatile int ticksLeft = 0;
+volatile int ticksRight = 0;
+double distanceLeft = 0;
+double distanceRight = 0;
 
 char flydurinoPtr[sizeof(Flydurino)];
 // aktuelle Beschleunigungswerte, Kompassmessungen
 int16_t acc_x, acc_y, acc_z;
 int16_t ori_x, ori_y, ori_z;
 int16_t rot_x, rot_y, rot_z;
+
 float current_rot_deg, sum_rot;
 // Wasserwaage oder Distanzmessung
 int8_t modus;
@@ -45,25 +53,13 @@ unsigned long lastTime;
 unsigned long deltaTime;
 
 int countZeros = 0;
-bool turnBack = false;
-
-volatile int ticksLeft = 0;
-volatile int ticksRight = 0;
-
-double distanceLeft = 0;
-double distanceRight = 0;
 
 //cm
 const double kc = (3.14159265 * 5) / 120;
 
-bool turned = false;
-bool startTick = true;
-float startValue;
 //float targetValue;
 
-
-enum motorMode
-{
+enum motorMode {
 	MOTOR_FORWARD,
 	MOTOR_TURN_LEFT,
 	MOTOR_TURN_RIGHT,
@@ -71,25 +67,21 @@ enum motorMode
 	MOTOR_ROTATE_LEFT,
 	MOTOR_ROTATE_RIGHT
 };
-enum speed
-{
-    SPEED_HIGH, SPEED_MEDIUM, SPEED_SLOW,SPEED_VERY_SLOW
+enum speed {
+	SPEED_HIGH, SPEED_MEDIUM, SPEED_SLOW, SPEED_VERY_SLOW
 };
 
 // Install the interrupt routine.
-ISR(INT4_vect)
-{
+ISR(INT4_vect) {
 	ticksRight++;
 }
 
-ISR(PCINT0_vect)
-{
+ISR(PCINT0_vect) {
 	ticksLeft++;
 }
 
 // the setup routine runs once when you press reset:
-void setup()
-{
+void setup() {
 	// initialize serial communication
 	Serial.begin(9600);
 
@@ -189,22 +181,24 @@ void setup()
 	// turn on interrupts
 //    pinMode(2,INPUT);
 //    pinMode(10,INPUT);
-	PCICR = (1 << PCIE0);
-	PCMSK0 = (1 << PCINT4);
+	PCICR = (1 << PCIE0);	// any change on PCINT7:0 will cause interrupt
+	PCMSK0 = (1 << PCINT4);	// enable pin change interrupt 4
 
-	EICRB = (1 << ISC40);
-	EIMSK = (1 << INT4);
+	EICRB = (1 << ISC40);	// generate interrupt on any logical change on INT4
+
+	EIMSK = (1 << INT4);	// enable external interrupt 4
+
 	sei();
+	// enable global interrupts
 //      EICRA = (1 << ISC01 | 1<<ISC00);
-	// -----------------------------------------------------
+// -----------------------------------------------------
 	lastTime = millis();
 	modus = 0;
 	sum_rot = 0;
 }
 
 /// displays degrees divided by 10
-void displayDegrees()
-{
+void displayDegrees() {
 	int displaySumRot = (int) sum_rot;
 	uint8_t sign;
 	uint8_t first;
@@ -222,32 +216,29 @@ void setSpeed(int speedMode)
 
 {
 
-	switch (speedMode)
-	{
+	switch (speedMode) {
 
 	case SPEED_HIGH:
 		OCR1A = 90;
-		OCR3C = 90 + 1.5 * differLeft;
+		OCR3C = 90 + 2 * differLeft;
 		break;
 	case SPEED_MEDIUM:
 		OCR1A = 120;
-		OCR3C = 120 + 1.5 * differLeft;
+		OCR3C = 120 + 2 * differLeft;
 		break;
 	case SPEED_SLOW:
 		OCR1A = 150;
-		OCR3C = 150 + 1.5* differLeft;
+		OCR3C = 150 + 2 * differLeft;
 		break;
 	case SPEED_VERY_SLOW:
 		OCR1A = 160;
-		OCR3C = 160 + 1.5 * differLeft;
+		OCR3C = 160 + 2 * differLeft;
 		break;
 	}
 }
 
-void setMotor(int motorMode)
-{
-	switch (motorMode)
-	{
+void setMotor(int motorMode) {
+	switch (motorMode) {
 	case MOTOR_FORWARD:
 		TCCR1A |= (1 << COM1A1 | 1 << COM1A0);
 		TCCR3A |= (1 << COM3C1 | 1 << COM3C0);
@@ -290,13 +281,13 @@ void setMotor(int motorMode)
 	}
 }
 
-void calculateGyro()
-{
-    currentTime = millis();
-    deltaTime = currentTime - lastTime;
-    lastTime = currentTime;
+void calculateGyro() {
+	currentTime = millis();
+	deltaTime = currentTime - lastTime;
+	lastTime = currentTime;
 	// Receive acceleromation values
 	((Flydurino*) (flydurinoPtr))->getAcceleration(&acc_x, &acc_y, &acc_z);
+
 	// Get compass data
 	((Flydurino*) (flydurinoPtr))->getOrientation(&ori_x, &ori_y, &ori_z);
 	// Get gyro data
@@ -314,8 +305,7 @@ void calculateGyro()
 	 2      | +/- 1000 degrees/s | 32.8 LSB/deg/s
 	 3      | +/- 2000 degrees/s | 16.4 LSB/deg/s */
 	uint8_t fs_sel = ((Flydurino*) (flydurinoPtr))->getFullScaleGyroRange();
-	switch (fs_sel)
-	{
+	switch (fs_sel) {
 	case 0:
 		rot_z = (int16_t) ((rot_z / 131));
 		break;
@@ -335,74 +325,52 @@ void calculateGyro()
 	sum_rot = sum_rot + current_rot_deg;
 }
 
-void gyroTask()
-{
+void gyroTask() {
 	// Receive acceleromation values
 
-	Serial.print("zeros: ");
-	Serial.print(countZeros);
-	Serial.print("\t");
+//	Serial.print("zeros: ");
+//	Serial.print(countZeros);
+//	Serial.print("\t");
 
-	if (current_rot_deg == 0)
-	{
+	if (current_rot_deg == 0) {
 		countZeros++;
-	}
-	else
-	{
+	} else {
 		countZeros = 0;
 	}
 
-	if (countZeros == 20)
-	{
+	if (countZeros == 20) {
 		countZeros = 0;
 		turnBack = true;
 	}
 
-	if (turnBack)
-	{
-		if (abs(sum_rot) > 10)
-		{
-			if (sum_rot > 0)
-			{
+	if (turnBack) {
+		if (abs(sum_rot) > 10) {
+			if (sum_rot > 0) {
 
-				if (sum_rot > 50)
-				{
+				if (sum_rot > 50) {
 					setSpeed(SPEED_HIGH);
 					setMotor(MOTOR_ROTATE_RIGHT);
-				}
-				else if (sum_rot > 30)
-				{
+				} else if (sum_rot > 30) {
 					setSpeed(SPEED_MEDIUM);
 					setMotor(MOTOR_ROTATE_RIGHT);
-				}
-				else if (sum_rot > 20)
-				{
+				} else if (sum_rot > 20) {
 					setSpeed(SPEED_SLOW);
 					setMotor(MOTOR_ROTATE_RIGHT);
 				}
 
-			}
-			else
-			{
-				if (abs(sum_rot) > 50)
-				{
+			} else {
+				if (abs(sum_rot) > 50) {
 					setSpeed(SPEED_HIGH);
 					setMotor(MOTOR_ROTATE_LEFT);
-				}
-				else if (abs(sum_rot) > 30)
-				{
+				} else if (abs(sum_rot) > 30) {
 					setSpeed(SPEED_MEDIUM);
 					setMotor(MOTOR_ROTATE_LEFT);
-				}
-				else if (abs(sum_rot) > 20)
-				{
+				} else if (abs(sum_rot) > 20) {
 					setSpeed(SPEED_SLOW);
 					setMotor(MOTOR_ROTATE_LEFT);
 				}
 			}
-		}
-		else
-		{
+		} else {
 			setMotor(MOTOR_STOP);
 			turnBack = false;
 		}
@@ -410,12 +378,14 @@ void gyroTask()
 
 	//display degrees divided by ten
 	displayDegrees();
+
 	/*
 	 Serial.print("fs_sel: ");Serial.print(fs_sel);
 	 Serial.print(" sum_rot: ");Serial.print(sum_rot); Serial.print("\t");
-	 Serial.print(rot_x); Serial.print("\t");
-	 Serial.print(rot_y); Serial.print("\t");
-	 Serial.print("R Z: ");Serial.print(rot_z); Serial.print("\t");
+	 //	 Serial.print(rot_x); Serial.print("\t");
+	 //	 Serial.print(rot_y); Serial.print("\t");
+	 //	 Serial.print("R Z: ");Serial.print(rot_z);
+	 //	 Serial.print("\t");
 	 Serial.print("C Z: ");Serial.print(current_rot_deg);Serial.print("\t");
 	 Serial.print("secs: ");Serial.print(secs);Serial.print("\t");
 	 Serial.print("dT: ");Serial.print(deltaTime);//Serial.print();
@@ -425,8 +395,7 @@ void gyroTask()
 	return;
 }
 
-void motorTask()
-{
+void motorTask() {
 	setSpeed(SPEED_HIGH);
 	setMotor(MOTOR_FORWARD);
 
@@ -434,52 +403,34 @@ void motorTask()
 	distance_right = linearizeDistance(readADC(channelRight));
 	distance_left = linearizeDistance(readADC(channelLeft));
 
-	Serial.print("RIGHT: ");
-	Serial.print(distance_right);
-	Serial.print("\t");
-	Serial.print("LEFT: ");
-	Serial.print(distance_left);
-	Serial.print("\r\n");
-
-	if (distance_right < 15)
-	{
-		if (distance_right < 10)
-		{
+	if (distance_right < 15) {
+		if (distance_right < 10) {
 			setMotor(MOTOR_ROTATE_LEFT);
 		}
 
-		else
-		{
+		else {
 			setSpeed(SPEED_SLOW);
 			setMotor(MOTOR_TURN_LEFT);
 		}
 
 	}
-	if (distance_left < 15)
-	{
+	if (distance_left < 15) {
 
-		if (distance_left < 10)
-		{
+		if (distance_left < 10) {
 			setMotor(MOTOR_ROTATE_RIGHT);
 		}
 
-		else
-		{
+		else {
 			setSpeed(SPEED_SLOW);
 			setMotor(MOTOR_TURN_RIGHT);
 		}
 
 	}
 
-	// Motor control
-	// -----------------------------------------------------
-
-	// -----------------------------------------------------
 	delay(50);
 }
 
-void turnTask()
-{
+void turnTask() {
 //
 //    if(!turned){
 //    	unsigned long currentTime=millis();
@@ -592,105 +543,118 @@ void turnTask()
 
 	setSpeed(SPEED_MEDIUM);
 	setMotor(MOTOR_FORWARD);
-//	calculateGyro();
-//	displayDegrees();
+
 	distanceLeft += kc * (double) ticksLeft * 0.5;
 	distanceRight += kc * (double) ticksRight * 0.5;
-	if (ticksLeft != ticksRight)
-	{
+	if (ticksLeft != ticksRight) {
 		differLeft = ticksLeft - ticksRight;
-//		Serial.print("Difference: ");
-//		Serial.print(differLeft);
 
 	}
 	// turn after 50
-	if (!turned &&((distanceLeft + distanceRight) / 2) > 50.0)
-	{
+	if (!turned && ((distanceLeft + distanceRight) / 2) > 50.0) {
 
-		if (startTick)
-		{
+		if (startTick) {
 			fisrtTick = ticksLeft;
 			startTick = false;
 		}
 
-		while (abs(startTick-ticksLeft) < turnValue)
-		{
-//			calculateGyro();
-//		    displayDegrees();
-			setSpeed(SPEED_SLOW);
+		while (abs(startTick-ticksLeft) < turnValue) {
+
+			setSpeed(SPEED_MEDIUM);
 			setMotor(MOTOR_ROTATE_LEFT);
 
 		}
-		turned=true;
+
+		turned = true;
 		setSpeed(SPEED_MEDIUM);
 		setMotor(MOTOR_FORWARD);
 	}
-	  if (turned && ((distanceLeft + distanceRight) / 2) > 100.0)
-        {
-	            setMotor(MOTOR_STOP);
-	     }
+	if (turned && !twoTurned && ((distanceLeft + distanceRight) / 2) > 100.0) {
 
+		while (abs(startTick-ticksLeft) < turnValue) {
+
+			setSpeed(SPEED_MEDIUM);
+			setMotor(MOTOR_ROTATE_LEFT);
+
+		}
+		twoTurned = true;
+		setMotor(MOTOR_STOP);
+
+	}
+	if (turned && twoTurned) {
+		setMotor(MOTOR_STOP);
+	}
 	ticksLeft = 0;
 	ticksRight = 0;
 	delay(200);
 }
 
-void regler()
-{
-
-	return;
+void resetAll() {
+	setMotor(MOTOR_STOP);
+	modus = 0;
+	sum_rot = 0;
+	ticksLeft = 0;
+	ticksRight = 0;
 
 }
 
-void loop()
-{
-	calculateGyro();
+void loop() {
+	//calculateGyro();
+	// Receive acceleromation values
+	((Flydurino*) flydurinoPtr)->getAcceleration(&acc_x, &acc_y, &acc_z);
+	Serial.print(acc_z);
+	if (acc_z > 17000) {
+
+		Serial.print("STOP");
+		resetAll();
+
+		//Serial.print("LEFT: ");
+		//    Serial.print(distanceLeft);
+		//    Serial.print(" cm\t");
+
+	}
 	// default state - avoids crash situations due to suddenly starting
 	// PWM modus
-	if (modus == 0)
-	{
+	if (modus == 0) {
 		writetoDisplay(0b10011111, 0b11111101, 0b10110111);
 
-		while (modus == 0)
-		{
+		while (modus == 0) {
 			modus = checkButtons();
 		}
 	}
 	// Gyro task
-	if (modus == 1)
-	{
+	if (modus == 1) {
 		gyroTask();
 	}
 	// Driving without any collision
-	if (modus == 2)
-	{
+	if (modus == 2) {
 		turnTask();
+
 	}
+
 	modus = checkButtons();
 }
 
-int8_t checkButtons()
-{
+int8_t checkButtons() {
 	int8_t modus_new = modus;
 	// Abfrage der Buttons und Moduswechsel
 	// -----------------------------------------------------
-	if (digitalRead(4))
-	{
+
+	if (digitalRead(4)) {
+
 		modus_new = 1;
 	}
-	if (analogRead(4) > 800)
-	{
+	if (analogRead(4) > 800) {
 		modus_new = 2;
 	}
-	if (modus != modus_new)
-	{
+	if (modus != modus_new) {
 		setMotor(MOTOR_STOP);
 	}
+
 	return modus_new;
 }
 
-void displaySpiritLevel(int16_t acc_x, int16_t acc_y, int16_t acc_z)
-{
+void displaySpiritLevel(int16_t acc_x, int16_t acc_y, int16_t acc_z) {
 
 	//   3 cases for roll and pitch
 	// -15 Grad <= alpha,
@@ -701,8 +665,7 @@ void displaySpiritLevel(int16_t acc_x, int16_t acc_y, int16_t acc_z)
 	// -----------------------------------------------------
 }
 
-uint8_t linearizeDistance(uint16_t distance_raw)
-{
+uint8_t linearizeDistance(uint16_t distance_raw) {
 	double distance_cm = 0;
 	distance_cm = 2 * ((3500 / (double) (distance_raw + 4)) - 1);
 
@@ -714,8 +677,7 @@ uint8_t linearizeDistance(uint16_t distance_raw)
 	return (int8_t) ceil(distance_cm);
 }
 
-void displayDistance(int8_t dist)
-{
+void displayDistance(int8_t dist) {
 
 	// Darstellung der Distanz in cm auf dem Display
 	// -----------------------------------------------------
@@ -724,22 +686,19 @@ void displayDistance(int8_t dist)
 
 }
 
-uint16_t readADC(int8_t channel)
-{
+uint16_t readADC(int8_t channel) {
 	uint16_t distance_raw = 0xFFFF;
 	// möglicherweise mehrmaliges Lesen des ADC Kanals
 	// Mittelwertbildung
 	// -----------------------------------------------------
 
 	int sum = 0;
-	for (int i = 0; i < NUM_READS; i++)
-	{
+	for (int i = 0; i < NUM_READS; i++) {
 		sortedValues[i] = analogRead(channel);
 
 	}
 
-	for (int i = 0; i < NUM_READS; i++)
-	{
+	for (int i = 0; i < NUM_READS; i++) {
 		sum += sortedValues[i];
 	}
 
@@ -748,19 +707,16 @@ uint16_t readADC(int8_t channel)
 	return distance_raw;
 }
 
-void writetoDisplay(char digit1, char digit2, char digit3)
-{
+void writetoDisplay(char digit1, char digit2, char digit3) {
 
 	char stream[36];
 	stream[0] = 1;
 	int i;
-	for (i = 1; i < 36; i++)
-	{
+	for (i = 1; i < 36; i++) {
 		stream[i] = 0;
 	}
 
-	for (i = 0; i < 8; i++)
-	{
+	for (i = 0; i < 8; i++) {
 		if (digit1 & (1 << (7 - i)))
 			stream[i + 1] = 1;
 		if (digit2 & (1 << (7 - i)))
@@ -769,8 +725,7 @@ void writetoDisplay(char digit1, char digit2, char digit3)
 			stream[i + 17] = 1;
 	}
 
-	for (i = 0; i < 36; i++)
-	{
+	for (i = 0; i < 36; i++) {
 		// clock low
 		PORTE &= ~(1 << 3);
 		// data enable low
@@ -790,10 +745,8 @@ void writetoDisplay(char digit1, char digit2, char digit3)
 	}
 }
 
-uint8_t displayMask(char val)
-{
-	switch (val)
-	{
+uint8_t displayMask(char val) {
+	switch (val) {
 	case ' ':
 		return 0b00000000;
 	case '0':
