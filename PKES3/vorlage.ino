@@ -546,10 +546,9 @@ void turnTask() {
 
 	distanceLeft += kc * (double) ticksLeft * 0.5;
 	distanceRight += kc * (double) ticksRight * 0.5;
-	if (ticksLeft != ticksRight) {
+
 		differLeft = ticksLeft - ticksRight;
 
-	}
 	// turn after 50
 	if (!turned && ((distanceLeft + distanceRight) / 2) > 50.0) {
 
