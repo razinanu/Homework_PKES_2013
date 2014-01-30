@@ -58,6 +58,10 @@ bool startdegree = true;
 float startValue;
 float targetValue;
 
+enum display{
+        Z0, Z1, Z2, Z3, Z4, Z5, Z6, Z7, Z8, Z9, MINUS_1, MINUS, SPACE
+};
+
 enum motorMode
 {
 	MOTOR_FORWARD,
@@ -65,7 +69,8 @@ enum motorMode
 	MOTOR_TURN_RIGHT,
 	MOTOR_STOP,
 	MOTOR_ROTATE_LEFT,
-	MOTOR_ROTATE_RIGHT
+    MOTOR_ROTATE_RIGHT,
+    MOTOR_BACKWARD
 };
 enum speed
 {
@@ -150,25 +155,15 @@ void setup()
 	 Waveform Generation Mode = 5 (0101) WGM3:0
 	 COMnA1/COMnB1/COMnC1 = 1 / COMnA0/COMnB0/COMnC0=0*/
 	// -----------------------------------------------------
-	pinMode(11, OUTPUT);
-	TCCR1A = 0 << COM1A1 | 0 << COM1A0 | 0 << COM1B1 | 0 << COM1B0 | 0 < COM1C1
-			| 0 << COM1C0 | 0 << WGM11 | 1 << WGM10;
-	TCCR1B =
-			0 << ICNC1 | 0 << ICES1
-					| 0 << 5| 0<<WGM13 | 1<<WGM12 | 0<<CS12 | 0<<CS11 | 1<<CS10;OCR1A=150;
+    pinMode(11,OUTPUT);
+    TCCR1A = 0 << COM1A1 | 0 << COM1A0 | 0 << COM1B1 | 0 << COM1B0 | 0 < COM1C1 | 0 << COM1C0 | 0 << WGM11 | 1 << WGM10;
+    TCCR1B = 0 << ICNC1 | 0 << ICES1 | 0 << 5| 0<<WGM13 | 1<<WGM12 | 0<<CS12 | 0<<CS11 | 1<<CS10;OCR1A=150;
 
-					pinMode
-	(
-3	,OUTPUT);
-	TCCR3A = 0 << COM3A1 | 0 << COM3A0 | 0 << COM3B1 | 0 << COM3B0 | 0 << COM3C1
-			| 0 << COM3C0 | 0 << WGM31 | 1 << WGM30;
-	TCCR3B =
-			0 << ICNC3 | 0 << ICES3
-					| 0 << 5| 0<<WGM33 | 1<<WGM32 | 0<<CS32 | 0<<CS31 | 1<<CS30;OCR3C=150;
+    pinMode (3,OUTPUT);
+    TCCR3A = 0 << COM3A1 | 0 << COM3A0 | 0 << COM3B1 | 0 << COM3B0 | 0 << COM3C1 | 0 << COM3C0 | 0 << WGM31 | 1 << WGM30;
+    TCCR3B = 0 << ICNC3 | 0 << ICES3 | 0 << 5| 0<<WGM33 | 1<<WGM32 | 0<<CS32 | 0<<CS31 | 1<<CS30;OCR3C=150;
 
-					pinMode
-	(
-13	,OUTPUT);
+    pinMode (13	,OUTPUT);
 	digitalWrite(13, HIGH);
 
 	pinMode(12, OUTPUT);
@@ -275,6 +270,12 @@ void setMotor(int motorMode)
 		digitalWrite(13, LOW);
 		digitalWrite(12, HIGH);
 		break;
+    case MOTOR_BACKWARD:
+        TCCR1A |= (1 << COM1A1 | 1 << COM1A0);
+        TCCR3A |= (1 << COM3C1 | 1 << COM3C0);
+        digitalWrite(13, LOW);
+        digitalWrite(12, LOW);
+        break;
 	default:
 		TCCR1A &= ~(1 << COM1A1 | 1 << COM1A0);
 		TCCR3A &= ~(1 << COM3C1 | 1 << COM3C0);
@@ -571,9 +572,43 @@ void regler()
 
 }
 
+void swarmTask()
+{
+    uint8_t distanceToWall, distanceForward;
+    distanceForward = linearizeDistance(readADC(channelRight));
+    distanceToWall = linearizeDistance(readADC(channelLeft));
+    displayDistance(distanceToWall);
+
+//    Serial.print("FWD: ");
+//    Serial.print(distanceForward);
+//    Serial.print("\t");
+//    Serial.print("WALL: ");
+//    Serial.print(distanceToWall);
+//    Serial.print("\r\n");
+
+//    analogWrite(11,255);
+//    analogWrite(3,255);
+    if (distanceForward >= 10)
+    {
+        setMotor(MOTOR_FORWARD);
+        if (distanceToWall < 17)
+        {
+            setMotor(MOTOR_TURN_LEFT);
+        }
+    }
+    if (distanceForward < 10)
+    {
+        setMotor(MOTOR_BACKWARD);
+    }
+
+
+
+    delay(50);
+}
+
 void loop()
 {
-	calculateGyro();
+    //calculateGyro();
 	// default state - avoids crash situations due to suddenly starting
 	// PWM modus
 	if (modus == 0)
@@ -588,12 +623,12 @@ void loop()
 	// Gyro task
 	if (modus == 1)
 	{
-		gyroTask();
+        swarmTask();
 	}
 	// Driving without any collision
 	if (modus == 2)
 	{
-		turnTask();
+        swarmTask();
 	}
 	modus = checkButtons();
 }
@@ -645,12 +680,42 @@ uint8_t linearizeDistance(uint16_t distance_raw)
 
 void displayDistance(int8_t dist)
 {
+    // Darstellung der Distanz in cm auf dem Display
+    // -----------------------------------------------------
+    char display[] = { 0b11111100, 0b01100000, 0b11011010, 0b11110010,
+                       0b01100110, 0b10110110, 0b10111110, 0b11100000, 0b11111110,
+                       0b11110110, 0b01100010, 0b00000010, 0b00000000 };
+    int8_t rest = dist;
+    int minus = 0;
+    int i = 0;
 
-	// Darstellung der Distanz in cm auf dem Display
-	// -----------------------------------------------------
+    int digit[3] = { SPACE, SPACE, SPACE };
 
-	// -----------------------------------------------------
+    if (rest < 0) {
+        rest = abs(rest);
+        minus = 1;
+      }
 
+    if (rest == 0) {
+        digit[0] = 0;
+      }
+
+    while (rest > 0) {
+        digit[i] = rest % 10;
+        rest = rest - digit[i];
+        rest = rest / 10;
+        i++;
+      }
+
+    if (minus) {
+        if (digit[2] == SPACE)
+          digit[2] = MINUS;
+        else
+          digit[2] = MINUS_1;
+      }
+
+    writetoDisplay(display[digit[2]], display[digit[1]], display[digit[0]]);
+    // -----------------------------------------------------
 }
 
 uint16_t readADC(int8_t channel)
