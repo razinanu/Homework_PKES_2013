@@ -16,12 +16,14 @@ void displayDistance(int8_t dist);
 uint16_t readADC(int8_t channel);
 void writetoDisplay(char digit1, char digit2, char digit3);
 uint8_t displayMask(char val);
+void followWall();
 
 const int NUM_READS = 10;
 float sortedValues[NUM_READS];
 int buffer = 0;
 //4 Aufgabe
 float differLeft = 0;
+float differRight = 0;
 int fisrtTick = 0;
 int turnValue = 350;
 bool turnBack = false;
@@ -65,7 +67,8 @@ enum motorMode {
 	MOTOR_TURN_RIGHT,
 	MOTOR_STOP,
 	MOTOR_ROTATE_LEFT,
-	MOTOR_ROTATE_RIGHT
+	MOTOR_ROTATE_RIGHT,
+	MOTOR_BACKWAR
 };
 enum speed {
 	SPEED_HIGH, SPEED_MEDIUM, SPEED_SLOW, SPEED_VERY_SLOW
@@ -153,9 +156,16 @@ void setup() {
 			0 << ICNC1 | 0 << ICES1
 					| 0 << 5| 0<<WGM13 | 1<<WGM12 | 0<<CS12 | 0<<CS11 | 1<<CS10;OCR1A=150;
 
+//	TCCR1A = _BV(WGM11) | _BV(WGM10); // -> fast PWM with OCR1A top
+//	TCCR1B = _BV(CS12) | _BV(WGM12);
+					//OCR1A = 90;
+
 					pinMode
 	(
-3	,OUTPUT);
+3	, OUTPUT);
+//	TCCR3A = _BV(WGM31) | _BV(WGM30); // -> fast PWM with OCR3A top
+//	TCCR3B = _BV(CS32) | _BV(WGM32);
+	//OCR3C = 90;
 	TCCR3A = 0 << COM3A1 | 0 << COM3A0 | 0 << COM3B1 | 0 << COM3B0 | 0 << COM3C1
 			| 0 << COM3C0 | 0 << WGM31 | 1 << WGM30;
 	TCCR3B =
@@ -164,7 +174,7 @@ void setup() {
 
 					pinMode
 	(
-13	,OUTPUT);
+13	, OUTPUT);
 	digitalWrite(13, HIGH);
 
 	pinMode(12, OUTPUT);
@@ -219,20 +229,22 @@ void setSpeed(int speedMode)
 	switch (speedMode) {
 
 	case SPEED_HIGH:
-		OCR1A = 90;
-		OCR3C = 90 + 2 * differLeft;
+		OCR1A = 90 + 2* differRight;
+		OCR3C = 90;
 		break;
 	case SPEED_MEDIUM:
-		OCR1A = 120;
-		OCR3C = 120 + 2 * differLeft;
+		// this setting is just for 5.exercise
+		OCR1A = 90 + 2 * differRight;
+
+		OCR3C = 160 + differLeft;
 		break;
 	case SPEED_SLOW:
-		OCR1A = 150;
-		OCR3C = 150 + 2 * differLeft;
+		OCR1A = 150 + 2 * differLeft;
+		OCR3C = 150;
 		break;
 	case SPEED_VERY_SLOW:
-		OCR1A = 160;
-		OCR3C = 160 + 2 * differLeft;
+		OCR1A = 160 + 2 * differLeft;
+		OCR3C = 160;
 		break;
 	}
 }
@@ -270,6 +282,12 @@ void setMotor(int motorMode) {
 		TCCR3A |= (1 << COM3C1 | 1 << COM3C0);
 		digitalWrite(13, LOW);
 		digitalWrite(12, HIGH);
+		break;
+	case MOTOR_BACKWAR:
+		TCCR1A |= (1 << COM1A1 | 1 << COM1A0);
+		TCCR3A |= (1 << COM3C1 | 1 << COM3C0);
+		digitalWrite(13, LOW);
+		digitalWrite(12, LOW);
 		break;
 
 	default:
@@ -431,115 +449,6 @@ void motorTask() {
 }
 
 void turnTask() {
-//
-//    if(!turned){
-//    	unsigned long currentTime=millis();
-//        setSpeed(SPEED_SLOW);
-//        setMotor(MOTOR_FORWARD);
-//        // calculate moved distance and integrate
-//        distanceLeft += kc * (double) ticksLeft * 0.5;
-//        unsigned long lastTime=millis();
-//        unsigned long differTime=lastTime-currentTime;
-//        speedLeft=distanceLeft/differTime;
-//        Serial.print("SPEED Left: ");
-//         Serial.print(speedLeft);
-//        distanceRight += kc * (double) ticksRight * 0.5;
-//        speedRight=distanceRight/currentTime;
-//        if(abs(distanceLeft-distanceRight)<5){
-//        	if(distanceRight>distanceRight){
-//        		differLeft=abs(speedLeft-speedRight);
-//        	}
-//        	else{
-//        		differRight=abs(speedLeft-speedRight);
-//        	}
-//        }
-//        displayDegrees();
-//        // turn after 50
-//        if (!turned && ((distanceLeft + distanceRight) / 2) > 50.0)
-//        {
-//           if(startdegree){
-//                //           startValue=sum_rot;
-//                targetValue = sum_rot+180;
-//                startdegree=false;
-//                setSpeed(SPEED_VERY_SLOW);
-//                setMotor(MOTOR_ROTATE_LEFT);
-//            }
-//
-//            //       if( abs(startValue-sum_rot)>90 && abs(startValue-sum_rot)<180){
-//            //           setSpeed(SPEED_SLOW);
-//            //           setMotor(MOTOR_ROTATE_LEFT);
-//            //       }
-//            //        if(abs(startValue-sum_rot)<90){
-//            //            setSpeed(SPEED_VERY_SLOW);
-//            //            setMotor(MOTOR_ROTATE_LEFT);
-//            //        }
-//            //        else{
-//            //            startdegree=true;
-//            //            turned=true;
-//            //        }
-//
-//            //        turned = true;
-//            //        targetSumRot = sum_rot;
-//            while (!turned)
-//            {
-//                calculateGyro();
-//                displayDegrees();
-//                float mySum = targetValue-sum_rot;
-//                if(abs(mySum)>2.5){
-//                    if (mySum > 0)
-//                    {
-//                        setSpeed(SPEED_SLOW);
-//                        setMotor(MOTOR_ROTATE_LEFT);
-//                    }
-//                    else
-//                    {
-//                        setSpeed(SPEED_SLOW);
-//                        setMotor(MOTOR_ROTATE_RIGHT);
-//                    }
-//                }else
-//                {
-//                    turned = true;
-//                    setMotor(MOTOR_STOP);
-//                }
-//
-//                delay(200);
-//                //		}
-//                //        setSpeed(SPEED_SLOW);
-//                //        setMotor(MOTOR_FORWARD);
-//                //        return;
-//            }
-//        }
-//    }else{
-//
-//    	setSpeed(SPEED_SLOW);
-//
-//        setMotor(MOTOR_FORWARD);
-//
-//        // calculate moved distance and integrate
-//        distanceLeft += kc * (double) ticksLeft * 0.5;
-//        distanceRight += kc * (double) ticksRight * 0.5;
-//
-//        displayDegrees();
-//
-//        if (turned && ((distanceLeft + distanceRight) / 2) > 100.0)
-//        {
-//            setMotor(MOTOR_STOP);
-//        }
-//    }
-//    // drive back
-//    // stop
-//    Serial.print("LEFT: ");
-//    Serial.print(distanceLeft);
-//    Serial.print(" cm\t");
-//    Serial.print("SPEED Left: ");
-//    Serial.print(speedLeft);
-//    Serial.print(" \t");
-//    Serial.print("SPEED Right: ");
-//    Serial.print(speedRight);
-//    Serial.print(" \t");
-//    Serial.print("RIGHT: ");
-//    Serial.print(distanceRight);
-//    Serial.print(" cm\r\n");
 
 	setSpeed(SPEED_MEDIUM);
 	setMotor(MOTOR_FORWARD);
@@ -547,7 +456,7 @@ void turnTask() {
 	distanceLeft += kc * (double) ticksLeft * 0.5;
 	distanceRight += kc * (double) ticksRight * 0.5;
 
-		differLeft = ticksLeft - ticksRight;
+	differLeft = ticksLeft - ticksRight;
 
 	// turn after 50
 	if (!turned && ((distanceLeft + distanceRight) / 2) > 50.0) {
@@ -597,6 +506,45 @@ void resetAll() {
 
 }
 
+void followWall() {
+
+	uint8_t distance_left, distance_right;
+	distance_left = linearizeDistance(readADC(channelLeft));
+
+	distance_right = linearizeDistance(readADC(channelRight));
+	//to avoid the velocity becomes more than 160
+	if (distance_left > 50) {
+		distance_left = 50;
+	}
+	if (distance_right > 50) {
+		distance_right = 50;
+	}
+	//to drive in circle the more distance to wall the more is the right velocity
+	differRight = distance_left - 17;
+	differLeft = 17 - distance_left;
+
+	setSpeed(SPEED_MEDIUM);
+	setMotor(MOTOR_FORWARD);
+// for the case that robot is so close to the wall
+	while (distance_left < 17 && distance_right < 10) {
+		distance_right = linearizeDistance(readADC(channelRight));
+		distance_left = linearizeDistance(readADC(channelLeft));
+		setSpeed(SPEED_MEDIUM);
+		setMotor(MOTOR_TURN_LEFT);
+
+	}
+	// in a case that there is obstacle in front of robot in distance less than 7
+	if (distance_right < 7 && distance_left > 20) {
+		while (distance_right < 14) {
+			distance_right = linearizeDistance(readADC(channelRight));
+			distance_left = linearizeDistance(readADC(channelLeft));
+			setSpeed(SPEED_MEDIUM);
+			setMotor(MOTOR_BACKWAR);
+		}
+	}
+
+}
+
 void loop() {
 	//calculateGyro();
 	// Receive acceleromation values
@@ -627,7 +575,8 @@ void loop() {
 	}
 	// Driving without any collision
 	if (modus == 2) {
-		turnTask();
+		//turnTask();
+		followWall();
 
 	}
 
