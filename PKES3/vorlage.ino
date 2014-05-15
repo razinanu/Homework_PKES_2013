@@ -40,7 +40,6 @@ char flydurinoPtr[sizeof(Flydurino)];
 int16_t acc_x, acc_y, acc_z;
 int16_t ori_x, ori_y, ori_z;
 int16_t rot_x, rot_y, rot_z;
-
 float current_rot_deg, sum_rot;
 // Wasserwaage oder Distanzmessung
 int8_t modus;
@@ -61,6 +60,10 @@ const double kc = (3.14159265 * 5) / 120;
 
 //float targetValue;
 
+enum display {
+	Z0, Z1, Z2, Z3, Z4, Z5, Z6, Z7, Z8, Z9, MINUS_1, MINUS, SPACE
+};
+
 enum motorMode {
 	MOTOR_FORWARD,
 	MOTOR_TURN_LEFT,
@@ -69,6 +72,7 @@ enum motorMode {
 	MOTOR_ROTATE_LEFT,
 	MOTOR_ROTATE_RIGHT,
 	MOTOR_BACKWAR
+
 };
 enum speed {
 	SPEED_HIGH, SPEED_MEDIUM, SPEED_SLOW, SPEED_VERY_SLOW
@@ -149,9 +153,10 @@ void setup() {
 	 Waveform Generation Mode = 5 (0101) WGM3:0
 	 COMnA1/COMnB1/COMnC1 = 1 / COMnA0/COMnB0/COMnC0=0*/
 	// -----------------------------------------------------
+
 	pinMode(11, OUTPUT);
 	TCCR1A = 0 << COM1A1 | 0 << COM1A0 | 0 << COM1B1 | 0 << COM1B0 | 0 < COM1C1
-			| 0 << COM1C0 | 0 << WGM11 | 1 << WGM10;
+	| 0 << COM1C0 | 0 << WGM11 | 1 << WGM10;
 	TCCR1B =
 			0 << ICNC1 | 0 << ICES1
 					| 0 << 5| 0<<WGM13 | 1<<WGM12 | 0<<CS12 | 0<<CS11 | 1<<CS10;OCR1A=150;
@@ -198,8 +203,9 @@ void setup() {
 
 	EIMSK = (1 << INT4);	// enable external interrupt 4
 
-	sei();
 	// enable global interrupts
+	sei();
+
 //      EICRA = (1 << ISC01 | 1<<ISC00);
 // -----------------------------------------------------
 	lastTime = millis();
@@ -229,8 +235,8 @@ void setSpeed(int speedMode)
 	switch (speedMode) {
 
 	case SPEED_HIGH:
-		OCR1A = 90 + 2* differRight;
-		OCR3C = 90;
+		OCR1A = 90 + 4 * differRight;
+		OCR3C = 120 + differLeft;
 		break;
 	case SPEED_MEDIUM:
 		// this setting is just for 5.exercise
@@ -283,14 +289,14 @@ void setMotor(int motorMode) {
 		digitalWrite(13, LOW);
 		digitalWrite(12, HIGH);
 		break;
-	case MOTOR_BACKWAR:
+case MOTOR_BACKWAR:
 		TCCR1A |= (1 << COM1A1 | 1 << COM1A0);
 		TCCR3A |= (1 << COM3C1 | 1 << COM3C0);
 		digitalWrite(13, LOW);
 		digitalWrite(12, LOW);
 		break;
 
-	default:
+default:
 		TCCR1A &= ~(1 << COM1A1 | 1 << COM1A0);
 		TCCR3A &= ~(1 << COM3C1 | 1 << COM3C0);
 		digitalWrite(13, HIGH);
@@ -506,6 +512,7 @@ void resetAll() {
 
 }
 
+<<<<<<< HEAD
 void followWall() {
 
 	uint8_t distance_left, distance_right;
@@ -551,199 +558,253 @@ void loop() {
 	((Flydurino*) flydurinoPtr)->getAcceleration(&acc_x, &acc_y, &acc_z);
 	Serial.print(acc_z);
 	if (acc_z > 17000) {
+	void swarmTask()
+		{
+			uint8_t distanceToWall, distanceForward;
+			distanceForward = linearizeDistance(readADC(channelRight));
+			distanceToWall = linearizeDistance(readADC(channelLeft));
+			displayDistance(distanceToWall);
 
-		Serial.print("STOP");
-		resetAll();
+//    Serial.print("FWD: ");
+//    Serial.print(distanceForward);
+//    Serial.print("\t");
+//    Serial.print("WALL: ");
+//    Serial.print(distanceToWall);
+//    Serial.print("\r\n");
 
-		//Serial.print("LEFT: ");
-		//    Serial.print(distanceLeft);
-		//    Serial.print(" cm\t");
+//    analogWrite(11,255);
+//    analogWrite(3,255);
+			if (distanceForward >= 10)
+			{
+				setMotor(MOTOR_FORWARD);
+				if (distanceToWall < 17)
+				{
+					setMotor(MOTOR_TURN_LEFT);
+				}
+			}
+			if (distanceForward < 10)
+			{
+				setMotor(MOTOR_BACKWARD);
+			}
 
-	}
-	// default state - avoids crash situations due to suddenly starting
-	// PWM modus
-	if (modus == 0) {
-		writetoDisplay(0b10011111, 0b11111101, 0b10110111);
+			delay(50);
+		}
 
-		while (modus == 0) {
+		void loop() {
+			//calculateGyro();
+			// default state - avoids crash situations due to suddenly starting
+			// PWM modus
+			if (modus == 0) {
+				writetoDisplay(0b10011111, 0b11111101, 0b10110111);
+
+				while (modus == 0) {
+					modus = checkButtons();
+				}
+			}
+			// Gyro task
+			if (modus == 1) {
+				swarmTask();
+			}
+			// Driving without any collision
+			if (modus == 2) {
+
+		}
+
 			modus = checkButtons();
 		}
-	}
-	// Gyro task
-	if (modus == 1) {
-		gyroTask();
-	}
-	// Driving without any collision
-	if (modus == 2) {
-		//turnTask();
-		followWall();
 
-	}
+		int8_t checkButtons() {
+			int8_t modus_new = modus;
+			// Abfrage der Buttons und Moduswechsel
+			// -----------------------------------------------------
 
-	modus = checkButtons();
-}
+			if (digitalRead(4)) {
 
-int8_t checkButtons() {
-	int8_t modus_new = modus;
-	// Abfrage der Buttons und Moduswechsel
-	// -----------------------------------------------------
+				modus_new = 1;
+			}
+			if (analogRead(4) > 800) {
+				modus_new = 2;
+			}
+			if (modus != modus_new) {
+				setMotor(MOTOR_STOP);
+			}
 
-	if (digitalRead(4)) {
+			return modus_new;
+		}
 
-		modus_new = 1;
-	}
-	if (analogRead(4) > 800) {
-		modus_new = 2;
-	}
-	if (modus != modus_new) {
-		setMotor(MOTOR_STOP);
-	}
+		void displaySpiritLevel(int16_t acc_x, int16_t acc_y, int16_t acc_z) {
 
-	return modus_new;
-}
+			//   3 cases for roll and pitch
+			// -15 Grad <= alpha,
+			// -15 Grad <= alpha  <= 15 Grad
+			//  15 Grad <= alpha
+			// -----------------------------------------------------
 
-void displaySpiritLevel(int16_t acc_x, int16_t acc_y, int16_t acc_z) {
+			// -----------------------------------------------------
+		}
 
-	//   3 cases for roll and pitch
-	// -15 Grad <= alpha,
-	// -15 Grad <= alpha  <= 15 Grad
-	//  15 Grad <= alpha
-	// -----------------------------------------------------
+		uint8_t linearizeDistance(uint16_t distance_raw) {
+			double distance_cm = 0;
+			distance_cm = 2 * ((3500 / (double) (distance_raw + 4)) - 1);
+			// distance_cm = (6787/(distance_raw - 3));
 
-	// -----------------------------------------------------
-}
+			// Transformation der Spannungsbezogenen Distanzwerte in
+			// eine Entfernung in cm
+			// -----------------------------------------------------
 
-uint8_t linearizeDistance(uint16_t distance_raw) {
-	double distance_cm = 0;
-	distance_cm = 2 * ((3500 / (double) (distance_raw + 4)) - 1);
-	// distance_cm = (6787/(distance_raw - 3));
+			// -----------------------------------------------------
+			return (int8_t) ceil(distance_cm);
+		}
 
-	// Transformation der Spannungsbezogenen Distanzwerte in
-	// eine Entfernung in cm
-	// -----------------------------------------------------
+		void displayDistance(int8_t dist) {
+			// Darstellung der Distanz in cm auf dem Display
+			// -----------------------------------------------------
+			char display[] = { 0b11111100, 0b01100000, 0b11011010, 0b11110010,
+					0b01100110, 0b10110110, 0b10111110, 0b11100000, 0b11111110,
+					0b11110110, 0b01100010, 0b00000010, 0b00000000 };
+			int8_t rest = dist;
+			int minus = 0;
+			int i = 0;
 
-	// -----------------------------------------------------
-	return (int8_t) ceil(distance_cm);
-}
+			int digit[3] = { SPACE, SPACE, SPACE };
 
-void displayDistance(int8_t dist) {
+			if (rest < 0) {
+				rest = abs(rest);
+				minus = 1;
+			}
 
-	// Darstellung der Distanz in cm auf dem Display
-	// -----------------------------------------------------
+			if (rest == 0) {
+				digit[0] = 0;
+			}
 
-	// -----------------------------------------------------
+			while (rest > 0) {
+				digit[i] = rest % 10;
+				rest = rest - digit[i];
+				rest = rest / 10;
+				i++;
+			}
 
-}
+			if (minus) {
+				if (digit[2] == SPACE)
+					digit[2] = MINUS;
+				else
+					digit[2] = MINUS_1;
+			}
 
-uint16_t readADC(int8_t channel) {
-	uint16_t distance_raw = 0xFFFF;
-	// möglicherweise mehrmaliges Lesen des ADC Kanals
-	// Mittelwertbildung
-	// -----------------------------------------------------
+			writetoDisplay(display[digit[2]], display[digit[1]],
+					display[digit[0]]);
+			// -----------------------------------------------------
+		}
 
-	int sum = 0;
-	for (int i = 0; i < NUM_READS; i++) {
-		sortedValues[i] = analogRead(channel);
+		uint16_t readADC(int8_t channel) {
+			uint16_t distance_raw = 0xFFFF;
+			// möglicherweise mehrmaliges Lesen des ADC Kanals
+			// Mittelwertbildung
+			// -----------------------------------------------------
 
-	}
+			int sum = 0;
+			for (int i = 0; i < NUM_READS; i++) {
+				sortedValues[i] = analogRead(channel);
 
-	for (int i = 0; i < NUM_READS; i++) {
-		sum += sortedValues[i];
-	}
+			}
 
-	distance_raw = sum / NUM_READS;
+			for (int i = 0; i < NUM_READS; i++) {
+				sum += sortedValues[i];
+			}
 
-	return distance_raw;
-}
+			distance_raw = sum / NUM_READS;
 
-void writetoDisplay(char digit1, char digit2, char digit3) {
+			return distance_raw;
+		}
 
-	char stream[36];
-	stream[0] = 1;
-	int i;
-	for (i = 1; i < 36; i++) {
-		stream[i] = 0;
-	}
+		void writetoDisplay(char digit1, char digit2, char digit3) {
 
-	for (i = 0; i < 8; i++) {
-		if (digit1 & (1 << (7 - i)))
-			stream[i + 1] = 1;
-		if (digit2 & (1 << (7 - i)))
-			stream[i + 9] = 1;
-		if (digit3 & (1 << (7 - i)))
-			stream[i + 17] = 1;
-	}
+			char stream[36];
+			stream[0] = 1;
+			int i;
+			for (i = 1; i < 36; i++) {
+				stream[i] = 0;
+			}
 
-	for (i = 0; i < 36; i++) {
-		// clock low
-		PORTE &= ~(1 << 3);
-		// data enable low
-		PORTH &= ~(1 << 4);
-		_delay_us(1);
-		// data
-		if (stream[i] == 1)
-			PORTH |= (1 << 3);
-		else
-			PORTH &= ~(1 << 3);
-		_delay_us(1);
-		// clock high - Transmission finished
-		PORTE |= (1 << 3);
-		_delay_us(1);
-		// data enable high - ready for next cycle
-		PORTH |= (1 << 4);
-	}
-}
+			for (i = 0; i < 8; i++) {
+				if (digit1 & (1 << (7 - i)))
+					stream[i + 1] = 1;
+				if (digit2 & (1 << (7 - i)))
+					stream[i + 9] = 1;
+				if (digit3 & (1 << (7 - i)))
+					stream[i + 17] = 1;
+			}
 
-uint8_t displayMask(char val) {
-	switch (val) {
-	case ' ':
-		return 0b00000000;
-	case '0':
-		return 0b11111100;
+			for (i = 0; i < 36; i++) {
+				// clock low
+				PORTE &= ~(1 << 3);
+				// data enable low
+				PORTH &= ~(1 << 4);
+				_delay_us(1);
+				// data
+				if (stream[i] == 1)
+					PORTH |= (1 << 3);
+				else
+					PORTH &= ~(1 << 3);
+				_delay_us(1);
+				// clock high - Transmission finished
+				PORTE |= (1 << 3);
+				_delay_us(1);
+				// data enable high - ready for next cycle
+				PORTH |= (1 << 4);
+			}
+		}
 
-	case '1':
-		return 0b01100000;
-	case '2':
-		return 0b11011010;
-	case '3':
-		return 0b11110010;
-	case '4':
-		return 0b01100110;
-	case '5':
-		return 0b10110110;
-	case '6':
-		return 0b10111110;
-	case '7':
-		return 0b11100000;
-	case '8':
-		return 0b11111110;
-	case '9':
-		return 0b11110110;
+		uint8_t displayMask(char val) {
+			switch (val) {
+			case ' ':
+				return 0b00000000;
+			case '0':
+				return 0b11111100;
 
-	case 'a':
-	case 'A':
-		return 0b11101110;
-	case 'b':
-	case 'B':
-		return 0b00111110;
-	case 'c':
-		return 0b00011010;
-	case 'C':
-		return 0b10011100;
-	case 'd':
-	case 'D':
-		return 0b01111010;
-	case 'e':
-	case 'E':
-		return 0b10011110;
-	case 'f':
-	case 'F':
-		return 0b10001110;
+			case '1':
+				return 0b01100000;
+			case '2':
+				return 0b11011010;
+			case '3':
+				return 0b11110010;
+			case '4':
+				return 0b01100110;
+			case '5':
+				return 0b10110110;
+			case '6':
+				return 0b10111110;
+			case '7':
+				return 0b11100000;
+			case '8':
+				return 0b11111110;
+			case '9':
+				return 0b11110110;
 
-	case '-':
-		return 0b00000010;
+			case 'a':
+			case 'A':
+				return 0b11101110;
+			case 'b':
+			case 'B':
+				return 0b00111110;
+			case 'c':
+				return 0b00011010;
+			case 'C':
+				return 0b10011100;
+			case 'd':
+			case 'D':
+				return 0b01111010;
+			case 'e':
+			case 'E':
+				return 0b10011110;
+			case 'f':
+			case 'F':
+				return 0b10001110;
 
-	default:
-		return 0b00000001;
-	}
-}
+			case '-':
+				return 0b00000010;
+
+			default:
+				return 0b00000001;
+			}
+		}
