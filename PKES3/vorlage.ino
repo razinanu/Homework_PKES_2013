@@ -62,6 +62,7 @@ const double kc = (3.14159265 * 5) / 120;
 
 enum display {
 	Z0, Z1, Z2, Z3, Z4, Z5, Z6, Z7, Z8, Z9, MINUS_1, MINUS, SPACE
+
 };
 
 enum motorMode {
@@ -71,7 +72,7 @@ enum motorMode {
 	MOTOR_STOP,
 	MOTOR_ROTATE_LEFT,
 	MOTOR_ROTATE_RIGHT,
-	MOTOR_BACKWAR
+	MOTOR_BACKWARD
 
 };
 enum speed {
@@ -135,7 +136,7 @@ void setup() {
 
 	// Configure buttons
 	// -----------------------------------------------------
-	digitalRead(4); // S1
+	digitalRead(4);		// S1
 
 	//  Configure PWM
 	//  Digital 11 | OC1A:
@@ -153,24 +154,16 @@ void setup() {
 	 Waveform Generation Mode = 5 (0101) WGM3:0
 	 COMnA1/COMnB1/COMnC1 = 1 / COMnA0/COMnB0/COMnC0=0*/
 	// -----------------------------------------------------
-
 	pinMode(11, OUTPUT);
 	TCCR1A = 0 << COM1A1 | 0 << COM1A0 | 0 << COM1B1 | 0 << COM1B0 | 0 < COM1C1
-	| 0 << COM1C0 | 0 << WGM11 | 1 << WGM10;
+			| 0 << COM1C0 | 0 << WGM11 | 1 << WGM10;
 	TCCR1B =
 			0 << ICNC1 | 0 << ICES1
 					| 0 << 5| 0<<WGM13 | 1<<WGM12 | 0<<CS12 | 0<<CS11 | 1<<CS10;OCR1A=150;
 
-//	TCCR1A = _BV(WGM11) | _BV(WGM10); // -> fast PWM with OCR1A top
-//	TCCR1B = _BV(CS12) | _BV(WGM12);
-					//OCR1A = 90;
-
 					pinMode
 	(
-3	, OUTPUT);
-//	TCCR3A = _BV(WGM31) | _BV(WGM30); // -> fast PWM with OCR3A top
-//	TCCR3B = _BV(CS32) | _BV(WGM32);
-	//OCR3C = 90;
+3	,OUTPUT);
 	TCCR3A = 0 << COM3A1 | 0 << COM3A0 | 0 << COM3B1 | 0 << COM3B0 | 0 << COM3C1
 			| 0 << COM3C0 | 0 << WGM31 | 1 << WGM30;
 	TCCR3B =
@@ -179,7 +172,8 @@ void setup() {
 
 					pinMode
 	(
-13	, OUTPUT);
+13	,OUTPUT);
+
 	digitalWrite(13, HIGH);
 
 	pinMode(12, OUTPUT);
@@ -196,13 +190,15 @@ void setup() {
 	// turn on interrupts
 //    pinMode(2,INPUT);
 //    pinMode(10,INPUT);
-	PCICR = (1 << PCIE0);	// any change on PCINT7:0 will cause interrupt
-	PCMSK0 = (1 << PCINT4);	// enable pin change interrupt 4
+	PCICR = (1 << PCIE0);		// any change on PCINT7:0 will cause interrupt
+	PCMSK0 = (1 << PCINT4);		// enable pin change interrupt 4
 
 	EICRB = (1 << ISC40);	// generate interrupt on any logical change on INT4
 
-	EIMSK = (1 << INT4);	// enable external interrupt 4
+	EIMSK = (1 << INT4);		// enable external interrupt 4
 
+	EICRB = (1 << ISC40);
+	EIMSK = (1 << INT4);
 	// enable global interrupts
 	sei();
 
@@ -289,14 +285,15 @@ void setMotor(int motorMode) {
 		digitalWrite(13, LOW);
 		digitalWrite(12, HIGH);
 		break;
-case MOTOR_BACKWAR:
+
+	case MOTOR_BACKWARD:
 		TCCR1A |= (1 << COM1A1 | 1 << COM1A0);
 		TCCR3A |= (1 << COM3C1 | 1 << COM3C0);
 		digitalWrite(13, LOW);
 		digitalWrite(12, LOW);
 		break;
+	default:
 
-default:
 		TCCR1A &= ~(1 << COM1A1 | 1 << COM1A0);
 		TCCR3A &= ~(1 << COM3C1 | 1 << COM3C0);
 		digitalWrite(13, HIGH);
@@ -512,7 +509,6 @@ void resetAll() {
 
 }
 
-<<<<<<< HEAD
 void followWall() {
 
 	uint8_t distance_left, distance_right;
@@ -546,7 +542,7 @@ void followWall() {
 			distance_right = linearizeDistance(readADC(channelRight));
 			distance_left = linearizeDistance(readADC(channelLeft));
 			setSpeed(SPEED_MEDIUM);
-			setMotor(MOTOR_BACKWAR);
+			setMotor (MOTOR_BACKWAR);
 		}
 	}
 
@@ -558,8 +554,7 @@ void loop() {
 	((Flydurino*) flydurinoPtr)->getAcceleration(&acc_x, &acc_y, &acc_z);
 	Serial.print(acc_z);
 	if (acc_z > 17000) {
-	void swarmTask()
-		{
+		void swarmTask() {
 			uint8_t distanceToWall, distanceForward;
 			distanceForward = linearizeDistance(readADC(channelRight));
 			distanceToWall = linearizeDistance(readADC(channelLeft));
@@ -574,16 +569,13 @@ void loop() {
 
 //    analogWrite(11,255);
 //    analogWrite(3,255);
-			if (distanceForward >= 10)
-			{
+			if (distanceForward >= 10) {
 				setMotor(MOTOR_FORWARD);
-				if (distanceToWall < 17)
-				{
+				if (distanceToWall < 17) {
 					setMotor(MOTOR_TURN_LEFT);
 				}
 			}
-			if (distanceForward < 10)
-			{
+			if (distanceForward < 10) {
 				setMotor(MOTOR_BACKWARD);
 			}
 
@@ -608,203 +600,293 @@ void loop() {
 			// Driving without any collision
 			if (modus == 2) {
 
-		}
+				void swarmTask() {
+					uint8_t distanceToWall, distanceForward;
+					distanceForward = linearizeDistance(readADC(channelRight));
+					distanceToWall = linearizeDistance(readADC(channelLeft));
+					displayDistance(distanceToWall);
 
-			modus = checkButtons();
-		}
+//    Serial.print("FWD: ");
+//    Serial.print(distanceForward);
+//    Serial.print("\t");
+//    Serial.print("WALL: ");
+//    Serial.print(distanceToWall);
+//    Serial.print("\r\n");
 
-		int8_t checkButtons() {
-			int8_t modus_new = modus;
-			// Abfrage der Buttons und Moduswechsel
-			// -----------------------------------------------------
+//    analogWrite(11,255);
+//    analogWrite(3,255);
+					if (distanceForward >= 10) {
+						setMotor(MOTOR_FORWARD);
+						if (distanceToWall < 17) {
+							setMotor(MOTOR_TURN_LEFT);
+						}
+					}
+					if (distanceForward < 10) {
+						setMotor(MOTOR_BACKWARD);
+					}
 
-			if (digitalRead(4)) {
+					delay(50);
+				}
 
-				modus_new = 1;
+				void loop() {
+					//calculateGyro();
+					// default state - avoids crash situations due to suddenly starting
+					// PWM modus
+					if (modus == 0) {
+						writetoDisplay(0b10011111, 0b11111101, 0b10110111);
+
+					}
+
+					modus = checkButtons();
+				}
+
 			}
-			if (analogRead(4) > 800) {
-				modus_new = 2;
+			// Gyro task
+			if (modus == 1) {
+				swarmTask();
 			}
-			if (modus != modus_new) {
-				setMotor(MOTOR_STOP);
+			// Driving without any collision
+			if (modus == 2) {
+				swarmTask();
 			}
 
-			return modus_new;
-		}
 
-		void displaySpiritLevel(int16_t acc_x, int16_t acc_y, int16_t acc_z) {
+			int8_t checkButtons() {
+				int8_t modus_new = modus;
+				// Abfrage der Buttons und Moduswechsel
+				// -----------------------------------------------------
 
-			//   3 cases for roll and pitch
-			// -15 Grad <= alpha,
-			// -15 Grad <= alpha  <= 15 Grad
-			//  15 Grad <= alpha
-			// -----------------------------------------------------
+				if (digitalRead(4)) {
 
-			// -----------------------------------------------------
-		}
+					modus_new = 1;
+				}
+				if (analogRead(4) > 800) {
+					modus_new = 2;
+				}
+				if (modus != modus_new) {
+					setMotor(MOTOR_STOP);
+				}
 
-		uint8_t linearizeDistance(uint16_t distance_raw) {
-			double distance_cm = 0;
-			distance_cm = 2 * ((3500 / (double) (distance_raw + 4)) - 1);
-			// distance_cm = (6787/(distance_raw - 3));
+				return modus_new;
+			}
 
-			// Transformation der Spannungsbezogenen Distanzwerte in
-			// eine Entfernung in cm
-			// -----------------------------------------------------
+			void displaySpiritLevel(int16_t acc_x, int16_t acc_y,
+					int16_t acc_z) {
 
-			// -----------------------------------------------------
-			return (int8_t) ceil(distance_cm);
-		}
+				//   3 cases for roll and pitch
+				// -15 Grad <= alpha,
+				// -15 Grad <= alpha  <= 15 Grad
+				//  15 Grad <= alpha
+				// -----------------------------------------------------
 
-		void displayDistance(int8_t dist) {
-			// Darstellung der Distanz in cm auf dem Display
-			// -----------------------------------------------------
-			char display[] = { 0b11111100, 0b01100000, 0b11011010, 0b11110010,
+				// -----------------------------------------------------
+			}
+
+			uint8_t linearizeDistance(uint16_t distance_raw) {
+				double distance_cm = 0;
+				distance_cm = 2 * ((3500 / (double) (distance_raw + 4)) - 1);
+				// distance_cm = (6787/(distance_raw - 3));
+
+				// Transformation der Spannungsbezogenen Distanzwerte in
+				// eine Entfernung in cm
+				// -----------------------------------------------------
+
+				// -----------------------------------------------------
+				return (int8_t) ceil(distance_cm);
+			}
+
+			void displayDistance(int8_t dist) {
+				// Darstellung der Distanz in cm auf dem Display
+				// -----------------------------------------------------
+				char display[] = { 0b11111100, 0b01100000, 0b11011010,
+						0b11110010, 0b01100110, 0b10110110, 0b10111110,
+						0b11100000, 0b11111110, 0b11110110, 0b01100010,
+						0b00000010, 0b00000000 };
+				int8_t rest = dist;
+				int minus = 0;
+				int i = 0;
+
+				int digit[3] = { SPACE, SPACE, SPACE };
+
+				if (rest < 0) {
+					rest = abs(rest);
+					minus = 1;
+				}
+
+
+				if (rest == 0) {
+					digit[0] = 0;
+				}
+
+				while (rest > 0) {
+					digit[i] = rest % 10;
+					rest = rest - digit[i];
+					rest = rest / 10;
+					i++;
+				}
+
+				if (minus) {
+					if (digit[2] == SPACE)
+						digit[2] = MINUS;
+					else
+						digit[2] = MINUS_1;
+				}
+
+				writetoDisplay(display[digit[2]], display[digit[1]],
+						display[digit[0]]);
+				// -----------------------------------------------------
+			}
+
+			void displayDistance(int8_t dist)
+			{
+				// Darstellung der Distanz in cm auf dem Display
+				// -----------------------------------------------------
+				char display[] = {0b11111100, 0b01100000, 0b11011010, 0b11110010,
 					0b01100110, 0b10110110, 0b10111110, 0b11100000, 0b11111110,
-					0b11110110, 0b01100010, 0b00000010, 0b00000000 };
-			int8_t rest = dist;
-			int minus = 0;
-			int i = 0;
+					0b11110110, 0b01100010, 0b00000010, 0b00000000};
+				int8_t rest = dist;
+				int minus = 0;
+				int i = 0;
 
-			int digit[3] = { SPACE, SPACE, SPACE };
+				int digit[3] = {SPACE, SPACE, SPACE};
 
-			if (rest < 0) {
-				rest = abs(rest);
-				minus = 1;
-			}
+				if (rest < 0) {
+					rest = abs(rest);
+					minus = 1;
+				}
 
-			if (rest == 0) {
-				digit[0] = 0;
-			}
+				if (rest == 0) {
+					digit[0] = 0;
+				}
 
-			while (rest > 0) {
-				digit[i] = rest % 10;
-				rest = rest - digit[i];
-				rest = rest / 10;
-				i++;
-			}
+				while (rest > 0) {
+					digit[i] = rest % 10;
+					rest = rest - digit[i];
+					rest = rest / 10;
+					i++;
+				}
 
-			if (minus) {
-				if (digit[2] == SPACE)
+				if (minus) {
+					if (digit[2] == SPACE)
 					digit[2] = MINUS;
-				else
+					else
 					digit[2] = MINUS_1;
+				}
+
+				writetoDisplay(display[digit[2]], display[digit[1]], display[digit[0]]);
+				// -----------------------------------------------------
 			}
 
-			writetoDisplay(display[digit[2]], display[digit[1]],
-					display[digit[0]]);
-			// -----------------------------------------------------
-		}
 
-		uint16_t readADC(int8_t channel) {
-			uint16_t distance_raw = 0xFFFF;
-			// möglicherweise mehrmaliges Lesen des ADC Kanals
-			// Mittelwertbildung
-			// -----------------------------------------------------
+			uint16_t readADC(int8_t channel) {
+				uint16_t distance_raw = 0xFFFF;
+				// möglicherweise mehrmaliges Lesen des ADC Kanals
+				// Mittelwertbildung
+				// -----------------------------------------------------
 
-			int sum = 0;
-			for (int i = 0; i < NUM_READS; i++) {
-				sortedValues[i] = analogRead(channel);
+				int sum = 0;
+				for (int i = 0; i < NUM_READS; i++) {
+					sortedValues[i] = analogRead(channel);
 
+				}
+
+				for (int i = 0; i < NUM_READS; i++) {
+					sum += sortedValues[i];
+				}
+
+				distance_raw = sum / NUM_READS;
+
+				return distance_raw;
 			}
 
-			for (int i = 0; i < NUM_READS; i++) {
-				sum += sortedValues[i];
+			void writetoDisplay(char digit1, char digit2, char digit3) {
+
+				char stream[36];
+				stream[0] = 1;
+				int i;
+				for (i = 1; i < 36; i++) {
+					stream[i] = 0;
+				}
+
+				for (i = 0; i < 8; i++) {
+					if (digit1 & (1 << (7 - i)))
+						stream[i + 1] = 1;
+					if (digit2 & (1 << (7 - i)))
+						stream[i + 9] = 1;
+					if (digit3 & (1 << (7 - i)))
+						stream[i + 17] = 1;
+				}
+
+				for (i = 0; i < 36; i++) {
+					// clock low
+					PORTE &= ~(1 << 3);
+					// data enable low
+					PORTH &= ~(1 << 4);
+					_delay_us(1);
+					// data
+					if (stream[i] == 1)
+						PORTH |= (1 << 3);
+					else
+						PORTH &= ~(1 << 3);
+					_delay_us(1);
+					// clock high - Transmission finished
+					PORTE |= (1 << 3);
+					_delay_us(1);
+					// data enable high - ready for next cycle
+					PORTH |= (1 << 4);
+				}
 			}
 
-			distance_raw = sum / NUM_READS;
+			uint8_t displayMask(char val) {
+				switch (val) {
+				case ' ':
+					return 0b00000000;
+				case '0':
+					return 0b11111100;
 
-			return distance_raw;
-		}
+				case '1':
+					return 0b01100000;
+				case '2':
+					return 0b11011010;
+				case '3':
+					return 0b11110010;
+				case '4':
+					return 0b01100110;
+				case '5':
+					return 0b10110110;
+				case '6':
+					return 0b10111110;
+				case '7':
+					return 0b11100000;
+				case '8':
+					return 0b11111110;
+				case '9':
+					return 0b11110110;
 
-		void writetoDisplay(char digit1, char digit2, char digit3) {
+				case 'a':
+				case 'A':
+					return 0b11101110;
+				case 'b':
+				case 'B':
+					return 0b00111110;
+				case 'c':
+					return 0b00011010;
+				case 'C':
+					return 0b10011100;
+				case 'd':
+				case 'D':
+					return 0b01111010;
+				case 'e':
+				case 'E':
+					return 0b10011110;
+				case 'f':
+				case 'F':
+					return 0b10001110;
 
-			char stream[36];
-			stream[0] = 1;
-			int i;
-			for (i = 1; i < 36; i++) {
-				stream[i] = 0;
+				case '-':
+					return 0b00000010;
+
+				default:
+					return 0b00000001;
+				}
 			}
-
-			for (i = 0; i < 8; i++) {
-				if (digit1 & (1 << (7 - i)))
-					stream[i + 1] = 1;
-				if (digit2 & (1 << (7 - i)))
-					stream[i + 9] = 1;
-				if (digit3 & (1 << (7 - i)))
-					stream[i + 17] = 1;
-			}
-
-			for (i = 0; i < 36; i++) {
-				// clock low
-				PORTE &= ~(1 << 3);
-				// data enable low
-				PORTH &= ~(1 << 4);
-				_delay_us(1);
-				// data
-				if (stream[i] == 1)
-					PORTH |= (1 << 3);
-				else
-					PORTH &= ~(1 << 3);
-				_delay_us(1);
-				// clock high - Transmission finished
-				PORTE |= (1 << 3);
-				_delay_us(1);
-				// data enable high - ready for next cycle
-				PORTH |= (1 << 4);
-			}
-		}
-
-		uint8_t displayMask(char val) {
-			switch (val) {
-			case ' ':
-				return 0b00000000;
-			case '0':
-				return 0b11111100;
-
-			case '1':
-				return 0b01100000;
-			case '2':
-				return 0b11011010;
-			case '3':
-				return 0b11110010;
-			case '4':
-				return 0b01100110;
-			case '5':
-				return 0b10110110;
-			case '6':
-				return 0b10111110;
-			case '7':
-				return 0b11100000;
-			case '8':
-				return 0b11111110;
-			case '9':
-				return 0b11110110;
-
-			case 'a':
-			case 'A':
-				return 0b11101110;
-			case 'b':
-			case 'B':
-				return 0b00111110;
-			case 'c':
-				return 0b00011010;
-			case 'C':
-				return 0b10011100;
-			case 'd':
-			case 'D':
-				return 0b01111010;
-			case 'e':
-			case 'E':
-				return 0b10011110;
-			case 'f':
-			case 'F':
-				return 0b10001110;
-
-			case '-':
-				return 0b00000010;
-
-			default:
-				return 0b00000001;
-			}
-		}
