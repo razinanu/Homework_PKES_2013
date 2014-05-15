@@ -616,6 +616,7 @@ void displaySpiritLevel(int16_t acc_x, int16_t acc_y, int16_t acc_z) {
 uint8_t linearizeDistance(uint16_t distance_raw) {
 	double distance_cm = 0;
 	distance_cm = 2 * ((3500 / (double) (distance_raw + 4)) - 1);
+	// distance_cm = (6787/(distance_raw - 3));
 
 	// Transformation der Spannungsbezogenen Distanzwerte in
 	// eine Entfernung in cm
